@@ -1,24 +1,102 @@
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-    <id>https://imhanjie.github.io/</id>
-    <title>Melody</title>
-    <updated>2019-09-23T15:25:51.397Z</updated>
-    <generator>https://github.com/jpmonette/feed</generator>
-    <link rel="alternate" href="https://imhanjie.github.io/"/>
-    <link rel="self" href="https://imhanjie.github.io//atom.xml"/>
-    <subtitle>Keep Alive.</subtitle>
-    <logo>https://imhanjie.github.io//images/avatar.png</logo>
-    <icon>https://imhanjie.github.io//favicon.ico</icon>
-    <rights>All rights reserved 2019, Melody</rights>
-    <entry>
-        <title type="html"><![CDATA[使用 SurfaceView 实现一个下雨的天气效果]]></title>
-        <id>https://imhanjie.github.io//post/use_surfaceview</id>
-        <link href="https://imhanjie.github.io//post/use_surfaceview">
-        </link>
-        <updated>2017-03-07T08:53:55.000Z</updated>
-        <summary type="html"><![CDATA[<p>介绍 SurfaceView 和 View 的区别，以及一些需要使用到 SurfaceView 的场景。</p>
-]]></summary>
-        <content type="html"><![CDATA[<p>介绍 SurfaceView 和 View 的区别，以及一些需要使用到 SurfaceView 的场景。</p>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>使用 SurfaceView 实现一个下雨的天气效果 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569252342489">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://imhanjie.github.io/">
+        <img src="https://imhanjie.github.io//images/avatar.png?v=1569252342489" class="site-logo">
+        <h1 class="site-title">Melody</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      Keep Alive.
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">使用 SurfaceView 实现一个下雨的天气效果</h2>
+            <div class="post-date">2017-03-07</div>
+            
+            <div class="post-content">
+              <p>介绍 SurfaceView 和 View 的区别，以及一些需要使用到 SurfaceView 的场景。</p>
 <!--more-->
 <blockquote>
 <ul>
@@ -283,6 +361,46 @@ mHolder.unlockCanvasAndPost(canvas);
 <li><a href="http://www.cnblogs.com/xuling/archive/2011/06/06/android.html">http://www.cnblogs.com/xuling/archive/2011/06/06/android.html</a></li>
 </ul>
 </blockquote>
-<!--  -->]]></content>
-    </entry>
-</feed>
+<!--  -->
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://imhanjie.github.io//tag/android" class="tag">
+                    Android
+                  </a>
+                
+              </div>
+            
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+
+<script type="application/javascript">
+
+AOS.init();
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>
