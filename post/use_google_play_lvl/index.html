@@ -1,0 +1,366 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>从注册 Google Play 开发者到如何使用 Google LVL 验证服务 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">从注册 Google Play 开发者到如何使用 Google LVL 验证服务</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2016-08-21</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>如果你想上架付费应用到Google Play，License Verification Library (LVL)是你必不可少的。</p>
+<!--more-->
+<blockquote>
+<ul>
+<li>文章来源：itsCoder 的 <a href="https://github.com/itsCoder/weeklyblog">WeeklyBolg</a> 项目</li>
+<li>itsCoder主页：<a href="http://itscoder.com/">http://itscoder.com/</a></li>
+<li>作者：<a href="http://melodyxxx.com/">Melodyxxx</a></li>
+<li>审阅者：<a href="https://github.com/Hymanme">Hymanme</a></li>
+</ul>
+</blockquote>
+<h2 id="关于license-verification-library-lvl">关于License Verification Library (LVL)</h2>
+<h3 id="什么是lvl">什么是LVL？</h3>
+<p>**License Verification Library (以下简称LVL)**是谷歌提供给开发者用于验证用户的合法身份的一个机制，比如你想上架一款付费应用(非付费应用也可以使用，但是这个一般没必要)到Google Play，为了防止APK的到处传播，你可以使用此证书验证机制，每次打开应用时，都会对当前用户的合法性进行授权检查。</p>
+<h3 id="lvl的工作流程">LVL的工作流程</h3>
+<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/rq5Zvpy.png" alt=""></figure>
+<p>上图来自Google的官方介绍。简单来说，验证时：</p>
+<ol>
+<li>应用通过Binder远程绑定到<strong>Google Play Service</strong>(所以用户的设备上必须装有Google Play)</li>
+<li>然后Google Play Service会将用户的信息和应用的数据去<strong>Market License Server</strong>(谷歌的证书服务器)去查询验证</li>
+<li>然后服务器返回给Google Play Service的证书状态(是否已经授权过的)</li>
+<li>然后Google Play Service再返回给我们的应用客户端，回调对应的方法，我们可以通过这些回调来处理对应的逻辑，例如未授权的就提示用户不允许继续使用此应用，然后自动退出应用等等</li>
+<li>用户付费购买时会在证书服务器有记录，所以未付费用户直接安装请求验证时，会返回未授权的状态</li>
+</ol>
+<h2 id="注册google-play开发者">注册Google Play开发者</h2>
+<h3 id="注册google-play开发者条件">注册Google Play开发者条件</h3>
+<ul>
+<li>科学上网</li>
+<li>一个Gmail邮箱</li>
+<li>一张信用卡(如果没有也没关系，下面会说道)</li>
+</ul>
+<h3 id="注册步骤">注册步骤</h3>
+<ol>
+<li>首先登陆：<a href="https://play.google.com/apps/publish/?hl=zh">Google Play 开发者控制台</a>,然后登陆你的Google账号，会自动跳转到开发者注册流程页面(前提你没有注册过开发者)</li>
+<li>然后填写相关信息，因为注册开发者账号，谷歌会收取25美元(约合人民币166元)作为注册费用，所以这里需要填写自己的信用卡信息，如果你是学生等原因没有信用卡，这里推荐一下万事达全球付，可以自己申请获取一个虚拟卡，获取成功会给你卡号，安全码等信息，然后可以使用此卡支持注册费用。具体可以自行网上搜索。</li>
+<li>注册完后会直接来答Google开发者页面，这里并不代表你已经成功注册开发者账号了，这个需要审核的，具体是否注册成功可以去Google Wallet查看自己的25美元订单信息，订单已完成说明审核通过了。</li>
+</ol>
+<h2 id="上传应用到alphabeta渠道">上传应用到Alpha/Beta渠道</h2>
+<p>注册完开发者后，你可以点击开发者界面首页的&quot;添加应用&quot;，创建你的应用<br>
+<img src="http://i.imgur.com/6hcQZYF.png" alt=""></p>
+<p>然后来到下面的界面</p>
+<figure data-type="image" tabindex="2"><img src="http://i.imgur.com/EjqgJyJ.png" alt=""></figure>
+<p>需要注意的是这里创建的应用称为&quot;草稿&quot;，即未发布的(包括未发布在Alpha或者Beta渠道的)应用，由于Google的最新规定，草稿应用不能使用LVL测试，所以如果不把APP发布到Alpha或者Beta渠道(由于正式发布之前需要进行LVL测试，所以不能发布到正式版渠道，正式版渠道是所有用户都能在Google Play搜索到你的应用的)，所以你需要使用LVL测试之前，需要发布你的APP到Alpha或者Beta渠道，你可以点击右上角的&quot;为什么不能发布？&quot;，系统会罗列出你达到发布之前未达到的条件，你只需要按照他的条件一步一步去完成，然后发布到Alpha或者Beta渠道，提交发布后，等上几个小时应该就能审核完成(48小时之内)。然后下面就进行LVL测试</p>
+<h2 id="下载lvl并配置到项目中">下载LVL并配置到项目中</h2>
+<h3 id="下载安装lvl库">下载安装LVL库</h3>
+<p>在进行LVL测试之前，你需要下载LVL库，这里从SDK Manager里面下载即可,找到Google Play License Library，然后Install安装<br>
+<img src="http://i.imgur.com/8B1sv7z.png" alt=""></p>
+<h3 id="导入到项目中">导入到项目中</h3>
+<p>安装完成后在你的<code>\your sdk dir\extras\google</code>目录下会有一个<code>market_licensing</code>目录，里面包含了library和对应的sample文件，这里我们先把library导入到我们的项目中去，为了保证不修改原library，我这里拷贝了一份library目录到桌面。这里为了演示，已经提前创建好了一个LVLTest项目，然后再project内新建一个Module，如下所示：</p>
+<p>点击File-&gt;New-&gt;Import Module</p>
+<figure data-type="image" tabindex="3"><img src="http://i.imgur.com/KZvFxU5.png" alt=""></figure>
+<p>目录我这里选的是刚刚拷贝到桌面的library目录，你也可以直接选sdk目录内的library，然后Module name这里自己填，我填的是lvlm</p>
+<figure data-type="image" tabindex="4"><img src="http://i.imgur.com/vZPIxdd.png" alt=""></figure>
+<p>然后Next，然后其他的别动，直接点击Finish，然后AS会自动Sync Gradle Files，一般这里肯定会报错的</p>
+<figure data-type="image" tabindex="5"><img src="http://i.imgur.com/G6cerZg.png" alt=""></figure>
+<p>很明显，我这里是Build Tools版本不对，这里需要修改下刚刚导入进来的Module内的build.gradle文件</p>
+<figure data-type="image" tabindex="6"><img src="http://i.imgur.com/87FVdLp.png" alt=""></figure>
+<pre><code>buildToolsVersion &quot;19.1.0&quot;
+</code></pre>
+<p>将buildToolsVersion版本换成自己app内的build.gradle(不是project内的)对应的版本即可，这里我的是:</p>
+<pre><code>buildToolsVersion &quot;24.0.0&quot;
+</code></pre>
+<p>另外<strong>把compileSdkVersion改成21即可</strong>，不要改成23以上的，因为Android6.0+移除了httpclient，要不然等会lvl module还会报错。</p>
+<p>然后在app的build.gradle的dependencies依赖内添加上module，这步不要少，也是官方文档未提到的地方:</p>
+<pre><code>compile project(':lvlm')
+</code></pre>
+<p>然后手动点击同步Gradle，然后不出意外就不会出任何错误了</p>
+<p>至此，成功将LVL导入到项目中去，当然还有其他的方法导入，具体可以参考<a href="https://developer.android.com/google/play/licensing/setting-up.html">官方文档</a></p>
+<h2 id="项目中实现lvl验证">项目中实现LVL验证</h2>
+<p>配置完后，下面开始正式在项目中实现LVL验证机制</p>
+<h3 id="配置权限">配置权限</h3>
+<p>首先添加下面权限：</p>
+<pre><code>&lt;uses-permission android:name=&quot;com.android.vending.CHECK_LICENSE&quot;/&gt;
+</code></pre>
+<p>另外需要说下，这里只需要这一个权限即可，有人会问为什么不需要INTERNET联网权限，验证不是要通过网络的吗？这里不要网络权限是因为验证时会远程绑定到Google Play的服务的，底层通过Binder的，具体验证操作是通过Google Play Service来完成的，自己是不需要进行网络请求操作的。</p>
+<h3 id="使用sample参考代码">使用Sample参考代码</h3>
+<p>下面开始编码来实现，编码之前，可以参考刚刚下载的sdk内的sample目录内的演示项目的MainActivity.java内的代码。下面时我移除了一些sample中的代码，为了看得方便，代码中已经详细注释：</p>
+<pre><code class="language-java">    // 这里填你的PUBLIC_KEY，具体的获取方法，见文章下面
+    private static final String BASE64_PUBLIC_KEY =&quot;YOUR PUBLIC KEY&quot;;
+    // 盐(这里指用于参与加密的随机数)这里应该是和验证的缓存有关，这里可以随便修改，也可以每次打开应用验证时随机成功
+    private static final byte[] SALT = new byte[]{
+            -43, 65, 36, -128, -103, -57, 74, -68, 51, 28, -26, -96, 37, -117, -33, -113, -44, 32, -64,
+            89
+    };
+
+    // 证书检查器
+    private LicenseChecker mChecker;
+    // 证书检查回调
+    private LicenseCheckerCallback mLicenseCheckerCallback;
+    // 证书检查后用于更新UI的Handler，因为回调方法是运行在Binder线程池中的，不能直接更新UI，所以需要借助Handler
+    private Handler mHandler;
+
+
+    /**
+     * 初始化证书，可在onCreate()方法内调用
+     */
+    private void init() {
+        mHandler = new Handler();
+        // 获取设备id
+        String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        // Library calls this when it's done.
+        mLicenseCheckerCallback = new MyLicenseCheckerCallback();
+        // Construct the LicenseChecker with a policy.
+        mChecker = new LicenseChecker(
+                this, new ServerManagedPolicy(this,
+                new AESObfuscator(SALT, getPackageName(), deviceId)),
+                BASE64_PUBLIC_KEY);
+        // 如果顺便再初始化的时候立即验证授权(也可以手动调用doCheck()检查授权)
+        doCheck();
+    }
+
+    // 开始检查
+    private void doCheck() {
+        // 检查
+        mChecker.checkAccess(mLicenseCheckerCallback);
+    }
+
+    /**
+     * 显示UI
+     */
+    protected void displayUI() {
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                // 在这里可以显示对话框或其他信息，用于提示用户，是否已经授权通过
+            }
+        });
+    }
+
+    private class MyLicenseCheckerCallback implements LicenseCheckerCallback {
+
+        // 授权通过会回调此方法
+        public void allow(int policyReason) {
+            if (isFinishing()) {
+                // Don't update UI if Activity is finishing.
+                return;
+            }
+            // do something...
+        }
+
+        // 授权不通过会回调此方法
+        public void dontAllow(int policyReason) {
+            if (isFinishing()) {
+                // Don't update UI if Activity is finishing.
+                return;
+            }
+            // do something...
+        }
+
+        // 一般是你的编码有问题导致错误时会回调此方法
+        public void applicationError(int errorCode) {
+            if (isFinishing()) {
+                return;
+            }
+            // do something...
+        }
+    }
+</code></pre>
+<h3 id="如何获取你的public_key">如何获取你的PUBLIC_KEY</h3>
+<p>首先登陆在自己的开发者控制台界面，进入应用，然后点击左侧的&quot;服务和API&quot;，即可看到：<br>
+<img src="http://i.imgur.com/ISa9idL.png" alt=""></p>
+<p>然后复制到代码中替换<code>YOUR PUBLIC KEY</code>，<strong>注意，千万不要复制出多余的空格，如果有，请删除</strong>。</p>
+<h3 id="android50需要注意的地方">Android5.0+需要注意的地方</h3>
+<p>如果你运行程序在Android5.0+的设备上，你会发现应用直接挂掉了，原因是，library中的远程绑定服务时使用的是隐式绑定，而Android5.0+已经不在支持隐式远程绑定了，所以我们需要修改一下library的源码：</p>
+<p>首先搜索定位到<strong>LicenseChecker.java</strong>文件的<strong>checkAccess()<strong>方法，对应于源文件的</strong>第153行</strong>：</p>
+<pre><code class="language-java"> Base64.decode(&quot;Y29tLmFuZHJvaWQudmVuZGluZy5saWNlbnNpbmcuSUxpY2Vuc2luZ1NlcnZpY2U=&quot;))),
+</code></pre>
+<p>为其指定Goolge Play的包名package name，修改如下所示：</p>
+<pre><code class="language-java">Base64.decode(&quot;Y29tLmFuZHJvaWQudmVuZGluZy5saWNlbnNpbmcuSUxpY2Vuc2luZ1NlcnZpY2U=&quot;))).setPackage(&quot;com.android.vending&quot;),
+</code></pre>
+<p>然后即可正常运行应用</p>
+<h3 id="测试以及对应的测试响应码说明">测试以及对应的测试响应码说明</h3>
+<p>上面的代码还有具体的处理逻辑没有写，所以自己测试之前，请参考SDK内的sample的处理逻辑。</p>
+<p>为了模拟各种授权的返回结果，Google为开发者提供了授权测试，可以模拟各种授权结果，以便开发者在应用发布之前处理好各种结果的逻辑，可以在开发者界面左侧的设置内的最下方即可找到，这里的Gmail账号不需要填，因为开发者自己的账号本身就在测试范围之内，如果你手机登录的其他Gmail账号，则需要将账号填进去即可，多个账号用逗号隔开</p>
+<figure data-type="image" tabindex="7"><img src="http://i.imgur.com/9LeluW8.png" alt=""></figure>
+<p>如图所示谷歌给我们提供了一些测试响应，下面列出几个常用的响应：</p>
+<table>
+<thead>
+<tr>
+<th>响应</th>
+<th>具体说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RESPOND_NORMALLY</td>
+<td>模拟正常响应</td>
+</tr>
+<tr>
+<td>LICENSED</td>
+<td>模拟已授权，对应于allow()方法回调</td>
+</tr>
+<tr>
+<td>NOT_LICENSED</td>
+<td>模拟未经授权的，对应于dontAllow()方法回调</td>
+</tr>
+<tr>
+<td>ERROR_NOT_MARKET_MANAGED</td>
+<td>此响应可模拟APP未发布到Google Play的情况，如果你之前没将APP发布到ALPHA或者BETA渠道，就会返回此响应，对应applicationError()方法回调</td>
+</tr>
+</tbody>
+</table>
+<h2 id="最后一点微小的建议">最后一点微小的建议</h2>
+<p>Google的LVL验证并不是很安全的，其实是很脆弱的，例如可以使用幸运破解器(Lucky Patcher)轻松移除LVL验证，破解后无论怎样，你的allow()方法总是会被回调，所以如果你想发布付费应用到Google Play，这里推荐你几点可以<strong>适当防止</strong>盗版的传播：</p>
+<ul>
+<li>首先使用LVL验证</li>
+<li>代码内检查签名，若发现签名不一致被修改，立马关闭程序或者友情提醒，具体方法可以网上搜索(<strong>这个方法最有效，可有效防止盗版APK的传播</strong>)</li>
+<li>代码内检查当前设备是否已安装幸运破解器，若已安装可以不让用户使用</li>
+<li>代码内检查当前设备是否已安装Google Play，没有安装可以判定为盗版</li>
+<li>使用网上各厂商的加固，可以防止被反编译</li>
+</ul>
+<blockquote>
+<p>本文参考资料或者想了解具体内容请参阅: https://developer.android.com/google/play/licensing/index.html</p>
+</blockquote>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/多进程中安全的使用SharedPreferences">
+              <h3 class="post-title">
+                下一篇：多进程中安全的使用 SharedPreferences
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

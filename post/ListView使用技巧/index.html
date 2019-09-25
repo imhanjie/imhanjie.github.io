@@ -1,0 +1,240 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>ListView使用技巧 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">ListView使用技巧</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2016-02-09</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>Android群英传-第4章ListView使用技巧 总结</p>
+<!--more-->
+<ul>
+<li>1、设置Item之间的分隔线</li>
+</ul>
+<pre><code class="language-java">android:divider=&quot;your color&quot;(设置分隔线透明可以@null)
+android:dividerHeight=&quot;10dp&quot;
+</code></pre>
+<ul>
+<li>2、隐藏ListView滚动条</li>
+</ul>
+<pre><code class="language-java">android:scrollbars=&quot;none&quot;
+</code></pre>
+<ul>
+<li>3、取消ListView的Item点击效果</li>
+</ul>
+<pre><code class="language-java">android:listSelector=&quot;#00000000&quot;
+</code></pre>
+<ul>
+<li>4、设置ListView需要显示在第几项</li>
+</ul>
+<pre><code class="language-java">mListView.setSelection(position);
+</code></pre>
+<p>这个方法类似scrollTo，是瞬间完成移动的，如果需要平滑移动，可以这样：</p>
+<pre><code class="language-java">mListView.smoothScrollBy(distance,duration);
+mListView.smoothScrollByOffset(offset);
+mListView.smoothScrollToPosition(index);
+</code></pre>
+<ul>
+<li>5、遍历ListView中的所有Item</li>
+</ul>
+<pre><code class="language-java">for(int i = 0; i &lt; mListView.getChildCount(); i++){
+	View view = mListView.getChildAt(i);
+}
+</code></pre>
+<ul>
+<li>6、ListView为空时(没有数据)显示对应的提示View</li>
+</ul>
+<pre><code class="language-java">mListView.setEmptyView(your empty view);
+</code></pre>
+<ul>
+<li>7、OnScrollListener内的onScroll()回调方法内的四个参数(onScroll在滑动时一直调用)
+<ul>
+<li>firstVisibleItem：当前能看见的第一个Item的ID(从0开始)</li>
+<li>visibleItemCount：当前能看见的Item总数(包括没显示完整的item)</li>
+<li>totalItemCount：整个ListView的Item总数</li>
+</ul>
+</li>
+</ul>
+<p>小应用1：</p>
+<pre><code class="language-java">if(firstVisibleItem + visibleItemCount == totalItemCount &amp;&amp; totalItemCount &gt; 0){
+	// 滚动到最后一行
+}
+</code></pre>
+<p>小应用2：</p>
+<pre><code class="language-java">if(firstVisibleItem &gt; lastVisibleItemPosition){
+	// 上滑
+}else if(firstVisibleItem  &lt; lastVisibleItemPosition){
+	// 下滑
+}
+// lastVisibleItemPosition可以是定义的成员变量来记录上一次第一个可视的item的id
+</code></pre>
+<p>另外ListView还提供了一个封装好的2个方法：</p>
+<pre><code class="language-java">// 获取可视区域内最后一个Item的id
+mListView.getLastVisiblePosition();
+// 获取可视区域内第一个Item的id
+mListView.getFirstVisiblePosition();
+</code></pre>
+<ul>
+<li>
+<p>8、ViewConfiguration.get(this).getScaledTouchSlop();这个方法可以获取系统认为产生了滑动的像素距离(正值)</p>
+</li>
+<li>
+<p>9、在BaseAdapter中除了几个常见的可覆盖的方法，还有2个比较有意思的方法：</p>
+</li>
+</ul>
+<pre><code class="language-java">@Override
+public int getItemViewType(int position){
+	return type;
+}
+// 这个方法可以根据position获取对应的item的type，有什么用呢？可以的getView方法内调用getItemViewType(position)方法，获取对应position的类型，例如可以根据类型加载不同的布局文件(类似聊天对话框)的实现。
+@Override
+public int getViewTypeCount(){
+	return count;
+}
+// 这个方法和上面的方法是对应的，一共有多少种类型，就返回对应的count值，例如类似普通的聊天对话框，这里就可以返回2(in,out)
+</code></pre>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/再见Actionbar-迎接Toolbar">
+              <h3 class="post-title">
+                下一篇：再见Actionbar,迎接Toolbar
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

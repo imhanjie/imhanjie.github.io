@@ -1,0 +1,504 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>「Android-Art」理解 Animation | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">「Android-Art」理解 Animation</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2016-07-27</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>理解Android中View动画、帧动画和属性动画的使用和原理</p>
+<!--more-->
+<h3 id="以下整理自android开发艺术探索第七章">以下整理自「Android开发艺术探索」第七章</h3>
+<hr>
+<p>Android中的动画可以分为三种：</p>
+<ul>
+<li>View动画
+<ul>
+<li>通过对场景里的对象不断做图像变换（平移、缩放、旋转、透明度）从而产生动画效果，他是一种渐近式动画，并且View动画支持自定义</li>
+</ul>
+</li>
+<li>帧动画
+<ul>
+<li>通过顺序播放一系列图像从而产生动画效果，可以简单理解为图片切换动画，很显然，如果图片过多过大就会导致OOM</li>
+</ul>
+</li>
+<li>属性动画
+<ul>
+<li>通过动态改变对象的属性从而达到动画效果，属性动画为API11的新特性，再低版本要使用属性的动画需要使用库</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p>其实帧动画也属于View动画的一种，只不过他的平移、旋转等常见的View动画在表现形式上略有不同而已</p>
+</blockquote>
+<h2 id="一-view动画">一、View动画：</h2>
+<h5 id="种类">种类：</h5>
+<ol>
+<li>TranslateAniamtion</li>
+<li>ScaleAnimation</li>
+<li>RotateAnimation</li>
+<li>AlphaAnimation</li>
+</ol>
+<p>这四种动画既可以通过XML定义，也可以通过代码来动态创建，对于View动画，建议采用XML来定义，应为XML格式的动画可读性更好</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>标签</th>
+<th>子类</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>平移动画</td>
+<td>&lt;translate&gt;</td>
+<td>TranslateAnimation</td>
+<td>移动View</td>
+</tr>
+<tr>
+<td>缩放动画</td>
+<td>&lt;scale&gt;</td>
+<td>ScaleAnimation</td>
+<td>放大或缩小View</td>
+</tr>
+<tr>
+<td>旋转动画</td>
+<td>&lt;rotate&gt;</td>
+<td>RotateAnimation</td>
+<td>旋转View</td>
+</tr>
+<tr>
+<td>透明度动画</td>
+<td>&lt;alpha&gt;</td>
+<td>AlphaAnimation</td>
+<td>改变View的透明度</td>
+</tr>
+</tbody>
+</table>
+<p>xml路径：res/anim/file_name.xml</p>
+<pre><code class="language-xml">&lt;set
+    xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+    android:interpolator=&quot;@[package:]anim/interpolator_resource&quot;
+    android:shareInterpolator=&quot;[&quot;true&quot; | &quot;false&quot;]&quot;&gt;
+
+    &lt;alpha
+        android:fromAlpha=&quot;float&quot;
+        android:toAlpha=&quot;float&quot;/&gt;
+
+    &lt;scale
+        android:fromXScale=&quot;float&quot;
+        android:fromYScale=&quot;float&quot;
+        android:pivotX=&quot;float&quot;
+        android:pivotY=&quot;float&quot;
+        android:toXScale=&quot;float&quot;
+        android:toYScale=&quot;float&quot;/&gt;
+
+    &lt;translate
+        android:fromXDelta=&quot;float&quot;
+        android:toXDelta=&quot;float&quot;
+        android:fromYDelta=&quot;float&quot;
+        android:toYDelta=&quot;float&quot;/&gt;
+
+    &lt;rotate
+        android:fromDegrees=&quot;float&quot;
+        android:toDegrees=&quot;float&quot;
+        android:pivotX=&quot;float&quot;
+        android:pivotY=&quot;float&quot;/&gt;
+    
+    ...
+
+&lt;/set&gt;
+</code></pre>
+<p>从上面的语法可以看出，View动画既可以是单个动画，也可以由一系列动画组成</p>
+<p>&lt;set&gt;标签标示动画集合，对应AnimationSet类，他可以包含若干个动画，并且它的内部也是可以嵌套其他动画集合的。</p>
+<h5 id="加载xml中的动画并设置给view播放">加载XML中的动画并设置给View播放</h5>
+<pre><code class="language-java">Animation animation = AnimationUtils.loadAnimation(this, R.anim.anim_demo);
+imageView.startAnimation(aniamtion);
+</code></pre>
+<h5 id="代码来创建动画">代码来创建动画</h5>
+<pre><code class="language-java">AlphaAnimation alphaAnimation = new AlphaAnimation(0,1);
+alphaAnimation.setDuration(3000);
+imageView.startAnimation(alphaAnimation);
+</code></pre>
+<h5 id="给animation设置动画监听">给animation设置动画监听</h5>
+<pre><code class="language-java">animation.setAnimationListener(new Animation.AnimationListener() {
+    @Override
+    public void onAnimationStart(Animation animation) {
+        
+    }
+
+    @Override
+    public void onAnimationEnd(Animation animation) {
+
+    }
+
+    @Override
+    public void onAnimationRepeat(Animation animation) {
+
+    }
+});
+</code></pre>
+<hr>
+<h2 id="二-帧动画">二、帧动画</h2>
+<p>帧动画是顺序播放一组预先定义好的图片，类似于电影播放。不同于View动画，系统提供了另外一个类AnimationDrawable来使用帧动画。帧动画的使用比较简单，首先需要通过XML来定义一个AnimationDrawable，如下所示：</p>
+<pre><code class="language-xml">&lt;animation-list xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;&gt;
+
+    &lt;item
+        android:drawable=&quot;@drawable/image1&quot;
+        android:duration=&quot;500&quot;/&gt;
+
+    &lt;item
+        android:drawable=&quot;@drawable/image2&quot;
+        android:duration=&quot;500&quot;/&gt;
+
+    &lt;item
+        android:drawable=&quot;@drawable/image3&quot;
+        android:duration=&quot;500&quot;/&gt;
+
+&lt;/animation-list&gt;
+</code></pre>
+<h5 id="播放帧动画">播放帧动画</h5>
+<pre><code class="language-java">Button button = (Button)findViewById(R.id.button);
+button.setBackgroundResource(R.drawable.fram_animation);
+AnimationDrawable drawable = (AnimationDrawable)button.getBackground();
+drawable.start();
+</code></pre>
+<h3 id="view动画的特殊使用场景">View动画的特殊使用场景</h3>
+<h5 id="1-layoutanimation">1、LayoutAnimation</h5>
+<p>例如给ListView的item添加出场动画(对所有的ViewGroup适用)</p>
+<pre><code class="language-xml">&lt;ListView
+    android:layout_width=&quot;match_parent&quot;
+    android:layout_height=&quot;match_parent&quot;
+    android:layoutAnimation=&quot;@anim/anim_demo&quot;/&gt;
+</code></pre>
+<h5 id="2-activity的切换效果">2、Activity的切换效果</h5>
+<pre><code class="language-java">overridePendingTransition(enterAnim, exitAnim);
+</code></pre>
+<p>以上的一行代码必须在startActivity()下面执行或者在finish后执行，否则无效果</p>
+<hr>
+<h2 id="三-属性动画">三、属性动画</h2>
+<p>属性动画是API11新加入的特性，和View动画不同，他对作用对象进行了扩展，属性动画可以对任何的对象做动画，升值还可以没有对象。属性动画中有ValueAnimator、ObjectAnimator和AnimatorSet等概念。</p>
+<h5 id="view动画和属性动画的区别">View动画和属性动画的区别？</h5>
+<ul>
+<li>View动画：采用的是矩阵变换来改变View的形态的，而未真实改变View的LayoutParams</li>
+<li>属性动画：采用反射改变View的属性，真实改变View的LayoutParams，功能也比View动画要强大，不仅局限于类似View动画的平移、旋转、缩放、透明度...</li>
+</ul>
+<p>View动画开销小，而属性动画内部采用的反射，所以开销也比View动画大，所以<a href="https://developer.android.com/guide/topics/graphics/prop-animation.html#property-vs-view">Android官方文档</a>也建议如果View动画能满足需求，可以不用使用属性动画.</p>
+<blockquote>
+<p>The view animation system, however, takes less time to setup and requires less code to write. If view animation accomplishes everything that you need to do, or if your existing code already works the way you want, there is no need to use the property animation system.</p>
+</blockquote>
+<ul>
+<li>属性动画默认时间间隔300ms，默认帧率10ms/帧，即10ms调用一次UpdateListener监听器的回调</li>
+</ul>
+<p>将背景从黑色到白色快速闪烁：</p>
+<pre><code class="language-java">RelativeLayout rootLayout = (RelativeLayout) findViewById(R.id.root_layout);
+ValueAnimator colorAnim = ObjectAnimator.ofInt(
+        rootLayout,
+        &quot;backgroundColor&quot;,
+        0xFF000000, 0xFFFFFFFF);
+colorAnim.setDuration(100);
+colorAnim.setEvaluator(new ArgbEvaluator());
+colorAnim.setRepeatCount(ValueAnimator.INFINITE);
+colorAnim.setRepeatMode(ValueAnimator.REVERSE);
+colorAnim.start();
+</code></pre>
+<p>属性动画集合：</p>
+<pre><code class="language-java">ImageView iv = (ImageView) findViewById(R.id.iv);
+AnimatorSet set = new AnimatorSet();
+// x轴旋转
+ObjectAnimator animator1 = ObjectAnimator.ofFloat(iv, &quot;rotationX&quot;, 0, -360);
+// y轴旋转
+ObjectAnimator animator2 = ObjectAnimator.ofFloat(iv, &quot;rotationY&quot;, 0, -180);
+// 平面旋转
+animator2.setRepeatCount(ValueAnimator.INFINITE);
+ObjectAnimator animator3 = ObjectAnimator.ofFloat(iv, &quot;rotation&quot;, 0, -90);
+set.playTogether(
+        animator1, animator2, animator3
+);
+set.setInterpolator(new LinearInterpolator());
+set.setDuration(1000);
+set.start();
+</code></pre>
+<p>另外属性动画也可以用xml文件来表示：</p>
+<ul>
+<li>&lt;set&gt;: 对应AnimatorSet</li>
+<li>&lt;animator&gt;: 对应ValueAnimator</li>
+<li>&lt;objectAnimator&gt;: 对应ObjectAnimator</li>
+</ul>
+<p>例如：</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;set xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+     android:ordering=&quot;together&quot;&gt;
+
+    &lt;objectAnimator
+        android:duration=&quot;1000&quot;
+        android:propertyName=&quot;x&quot;
+        android:valueTo=&quot;200&quot;
+        android:valueType=&quot;floatType&quot;/&gt;
+
+    &lt;objectAnimator
+        android:duration=&quot;3000&quot;
+        android:propertyName=&quot;y&quot;
+        android:valueTo=&quot;300&quot;
+        android:valueType=&quot;floatType&quot;/&gt;
+
+&lt;/set&gt;
+</code></pre>
+<p>应用上面的xml代码：</p>
+<pre><code class="language-java">AnimatorSet set = AnimatorInflater.loadAnimator(context,R.animator.animator_demo);
+set.setTraget(your_view);
+set.start();
+</code></pre>
+<p><strong>开发中建议采用代码来实现属性动画</strong>，因为代码实现较为简单。更重要的是，很多时候一个属性的起始值是无法提前确定的，例如一个View的宽度。</p>
+<h3 id="理解插值器和估值器">理解插值器和估值器</h3>
+<p><strong>1、TimeInterpolator</strong>：中文翻译为时间插值器，作用是根据时间流逝的百分比计算出当前属性值改、变的百分比，系统预置的插值器有：</p>
+<ul>
+<li>LinearInterpolator: 线性插值器-匀速动画</li>
+<li>AccelerateDecelerateInterpolator: 加速减速插值器-动画两头慢，中间快</li>
+<li>AccelerateInterpolator: 加速插值器-动画越来越快</li>
+<li>DecelerateInterpolator: 减速插值器-动画越来越慢</li>
+<li><a href="https://developer.android.com/guide/topics/graphics/prop-animation.html">等等</a></li>
+</ul>
+<p>LinearInterpolator的实现: 匀速动画，输入和输入保持一致(输入input是指时间流逝的百分比)</p>
+<pre><code class="language-java">public class LinearInterpolator extends BaseInterpolator implements NativeInterpolatorFactory {
+
+    public LinearInterpolator() {
+    }
+
+    public LinearInterpolator(Context context, AttributeSet attrs) {
+    }
+
+    public float getInterpolation(float input) {
+        return input;
+    }
+
+	...
+   
+}
+</code></pre>
+<p><strong>2、TypeEvaluator</strong>：中文翻译为类型估值器(算法)，作用是根据当前属性改变的百分比(上面插值器计算来的)来计算改变后的属性值，系统预置的估值器(算法)有：</p>
+<ul>
+<li>IntEvaluator</li>
+<li>FloatEvaluator</li>
+<li>ArgbEvaluator</li>
+</ul>
+<p>IntEvaluator的实现：参数fraction即为插值器计算出来的属性改变的百分比，交由估值器计算应改变的属性值</p>
+<pre><code class="language-java">public class IntEvaluator implements TypeEvaluator&lt;Integer&gt; {
+
+    public Integer evaluate(float fraction, Integer startValue, Integer endValue) {
+        int startInt = startValue;
+        return (int)(startInt + fraction * (endValue - startInt));
+    }
+
+}
+</code></pre>
+<p>** 3、属性动画监听器**</p>
+<p>主要有两个接口：</p>
+<ul>
+<li>AnimatorUpdateListener: 位于ValueAnimator内</li>
+<li>AnimatorListener: 位于Animator类内</li>
+</ul>
+<p>AnimatorUpdateListener:</p>
+<pre><code class="language-java">    public static interface AnimatorUpdateListener {
+
+        void onAnimationUpdate(ValueAnimator animation);
+
+    }
+</code></pre>
+<p>AnimatorListener:</p>
+<pre><code class="language-java">    public static interface AnimatorListener {
+
+        void onAnimationStart(Animator animation);
+
+        void onAnimationEnd(Animator animation);
+
+        void onAnimationCancel(Animator animation);
+
+        void onAnimationRepeat(Animator animation);
+    }
+</code></pre>
+<p><strong>4、属性动画的工作原理</strong></p>
+<p>属性动画要求动画作用的对象提供该属性的get和set方法，属性动画根据外界传递的属性的初始值和最终值，以动画的效果多次去调用set方法，每次传递给set方法的值都不一样确切来说是随着时间的推移，所传递的值越来越接近最终值。总结一下，我们对object的属性abc做动画，如果想让动画生效，要同时满足两个条件，缺一不可：</p>
+<ul>
+<li>object必须要提供setAbc方法，如果动画的时候没有传统初始值，那么还要提供getAbc方法，因为系统要去取abc属性的初始值(如果这条不满足，程序直接crash)</li>
+<li>object的setAbc对属性abc所做的改变必须能通过某种方式反映出来，比如会带来UI的改变之类的(如果这条不满足，动画无效果但不会crash)</li>
+</ul>
+<p>如果上述条件不满足，可以采用以下三种方法解决：</p>
+<ul>
+<li>1、给你的对象加上get和set方法，如果你有权限的话</li>
+<li>2、用一个类来包装原始对象，间接为其提供get和set方法</li>
+<li>3、采用ValueAnimator，监听动画过程，自己实现属性的改变</li>
+</ul>
+<p>对于第二个解决办法，提供一个实例，例如对Button包装：</p>
+<pre><code class="language-java">private static class ViewWrapprer {
+
+    private View mTarget;
+
+    public ViewWrapprer(View target) {
+        mTarget = target;
+    }
+
+    public int getWidth() {
+        return mTarget.getWidth();
+    }
+
+    public void setWidth(int width) {
+        mTarget.getLayoutParams().width = width;
+        mTarget.requestLayout();
+    }
+
+}
+</code></pre>
+<h2 id="四-使用动画需要注意的地方">四、使用动画需要注意的地方</h2>
+<ul>
+<li>在属性动画若使用无限循环的动画，这类动画需要在Activity退出后及时停止，否则将导致Activity无法释放从而造成内存泄漏，可以调用动画的cancel()方法，View动画则不用担心此为问题</li>
+<li>使用帧动画图片数量较多且图片较大的时候极易出现OOM，所以尽量避免使用帧动画</li>
+<li>开启硬件加速会提高动画的流畅性</li>
+<li>不要使用px，否则不同的设备效果可能会有所不同</li>
+</ul>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/「Android-Art」理解PendingIntent">
+              <h3 class="post-title">
+                下一篇：「Android-Art」理解PendingIntent
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

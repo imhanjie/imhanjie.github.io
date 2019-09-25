@@ -1,0 +1,298 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Android Jetpack 系列之 Lifecycles | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Android Jetpack 系列之 Lifecycles</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2019-01-16</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>基于观察者模式的生命周期感知组件。</p>
+<!-- more -->
+<h3 id="介绍">介绍</h3>
+<p>如果一个组件 ( 类 ) 需要感知 Activity ( 或 Fragment ) 的生命周期，以前的写法是在 Activity 的各个生命周期方法内去调用这个组件的方法，如果一个 Activity 引用了很多组件，并且这些组件都需要感知其生命周期，那么 Activity 的代码会越来越多不易维护。这时候需要 LifeCycle，使用观察者模式，Activity 为被观察者 ( LifecycleOwner )，各组件为观察者( LifecycleObserver ) 来感知 Activity 的生命周期，当 Activity 生命周期发生变化时，各组件就可以在自己内部收到通知去执行自己的逻辑，将代码从 Activity 中挪到组件自己内部，使 Activity 更简洁。</p>
+<h3 id="导入">导入</h3>
+<p>导入的方式很简单，这里直接使用最新的 androix.* 包</p>
+<pre><code class="language-groovy">implementation 'androidx.appcompat:appcompat:1.0.2'
+</code></pre>
+<h3 id="使用">使用</h3>
+<p>假如有一个这样的场景，我们有一个 LocationClient 类 ( 或者称之为组件 ) ，它可以获取到最新的位置信息，一般的需要在 Activity 的 <code>onCreate()</code> 方法中去初始化它，然后在 <code>onResume()</code> 中启动定位服务，在 <code>onPause()</code> 中停止定位服务，最后当 Activity 销毁时需要在 <code>onDestroy()</code> 方法中去停止定位以及释放一些资源。</p>
+<p>那么以前的写法可能是以下这样的：</p>
+<pre><code class="language-java">public class LocationClient {
+
+    /**
+     * 初始化
+     */
+    public void init() {
+        // ...
+    }
+
+    /**
+     * 启动定位服务
+     */
+    public void startLocateService() {
+        // ...
+    }
+
+    /**
+     * 停止定位服务
+     */
+    public void stopLocateService() {
+        // ...
+    }
+
+    /**
+     * 销毁并释放资源
+     */
+    public void destroy() {
+        // ...
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">public class LocateActivity extends AppCompatActivity {
+
+    private LocationClient mLocationClient;
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        mLocationClient = new LocationClient();
+        mLocationClient.init();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mLocationClient.startLocateService();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mLocationClient.stopLocateService();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mLocationClient.destroy();
+    }
+
+}
+</code></pre>
+<p>以上的写法看着是没什么问题，但是如果一个 Acitivty 中使用到的组件很多，例如地图组件等，那么 Activity 的生命周期方法内会充满这样的代码，显得臃肿，不易维护。</p>
+<p>接下来看下使用 Lifecycle 的写法：</p>
+<pre><code class="language-java">public class LocationClient implements LifecycleObserver {
+
+    private LifecycleOwner mLifecycleOwner;
+
+    public LocationClient(LifecycleOwner lifecycleOwner) {
+        mLifecycleOwner = lifecycleOwner;
+        mLifecycleOwner.getLifecycle().addObserver(this);
+    }
+
+    /**
+     * 初始化
+     */
+    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    public void init() {
+        // ...
+    }
+
+    /**
+     * 启动定位服务
+     */
+    @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    public void startLocateService() {
+        // ...
+    }
+
+    /**
+     * 停止定位服务
+     */
+    @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+    public void stopLocateService() {
+        // ...
+    }
+
+    /**
+     * 销毁并释放资源
+     */
+    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    public void destroy() {
+        // ...
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">public class LocateActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        new LocationClient(this);
+    }
+
+}
+</code></pre>
+<p>可以发现，使用 Lifecycle 的写法和以前相比，Activity 代码变得更加简洁，分析代码之前先解释一下 2 个类：</p>
+<ul>
+<li><strong>LifecycleOwner</strong> : 被观察的对象</li>
+<li><strong>LifecycleObserver</strong> : 观察者，当 LifecycleOwner 的生命周期发生变更的时候，会通知给它</li>
+</ul>
+<p>所以从代码中可以看成，LifecycleOwner 被观察的对象就是这里的 Activity，这里我们的 Activity 最终继承自 ComponentActivity，ComponentActivity 实现了 LifecycleOwner 接口：</p>
+<pre><code class="language-java">public class ComponentActivity extends Activity
+  implements LifecycleOwner, KeyEventDispatcher.Component {
+  // ...
+}
+</code></pre>
+<p>所以 Activity 是一个被观察者，然后我们手动让 LocateClient 实现了LifecycleObserver，将其作为一个观察者，然后通过 <code>mLifecycleOwner.getLifecycle().addObserver(this);</code> 将 LocateClient 作为 LocateActivity 的观察者，最后在 LocateClient 中原本需要在 Activity 生命周期中调用的方法上面都加上了与之对应的 <code>@OnLifecycleEvent()</code> 生命周期注解，这样当 Activity 的生命周期发生变更的时候，会自动调用到 LocateClient 对应的方法，非常简便，Activity 更加轻量。</p>
+<h3 id="总结">总结</h3>
+<p>使用 Lifecycle 的写法其实就是将 Activity 中的代码转移到了组件自己内部中，以前是 Activity 生命周期发生变更时需要 Activity 自己一个一个的去通知组件，现在是 Activity 不用去主动通知组件，如果一个组件想要感知 Activity 的生命周期，组件自己注册进来监听。重心由 Activity 转移到了组件中去，让 Activity 不需要关心组件的逻辑，最后 Lifecycle 配合 MVP 食用更加。</p>
+<h3 id="参考">参考</h3>
+<p><a href="https://developer.android.com/topic/libraries/architecture/lifecycle">Handling Lifecycles with Lifecycle-Aware Components</a></p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/android_touch_event_dispatch">
+              <h3 class="post-title">
+                下一篇：Android 事件分发机制
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

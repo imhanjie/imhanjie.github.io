@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>mipmap文件夹的作用 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">mipmap文件夹的作用</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2016-02-04</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>简述res/目录下的drawable/目录和mipmap/目录的区别</p>
+<!--more-->
+<hr>
+<p>在Android Studio中新建一个Project的时候，相比Eclipse创建时res/目录内会多几个mipmap文件夹</p>
+<figure data-type="image" tabindex="1"><img src="https://raw.githubusercontent.com/bluehan/Images/master/Other/mipmap.png" alt="mipmap"></figure>
+<p>刚开始以为是mipmap是取代drawable来存放图片文件的，后来看到官网的这篇文章才知道mipmap文件夹只是Android推荐用来存放app的launcher icon的目录。</p>
+<h4 id="原文地址"><strong>原文地址:</strong></h4>
+<ul>
+<li><a href="http://developer.android.com/intl/zh-cn/tools/projects/index.html#mipmap">Managing Launcher Icons as mipmap Resources</a></li>
+</ul>
+<blockquote>
+<p>原文:<br>
+Different home screen launcher apps on different devices show app launcher icons at various resolutions. When app resource optimization techniques remove resources for unused screen densities, launcher icons can wind up looking fuzzy because the launcher app has to upscale a lower-resolution icon for display. To avoid these display issues, apps should use the mipmap/ resource folders for launcher icons. The Android system preserves these resources regardless of density stripping, and ensures that launcher apps can pick icons with the best resolution for display.Make sure launcher apps show a high-resolution icon for your app by moving all densities of your launcher icons to density-specific res/mipmap/ folders (for example res/mipmap-mdpi/ and res/mipmap-xxxhdpi/). The mipmap/ folders replace the drawable/ folders for launcher icons. For xxhpdi launcher icons, be sure to add the higher resolution xxxhdpi versions of the icons to enhance the visual experience of the icons on higher resolution devices.</p>
+<blockquote>
+<p><strong>Note: Even if you build a single APK for all devices, it is still best practice to move your launcher icons to the mipmap/ folders.</strong></p>
+</blockquote>
+</blockquote>
+<p>最后一段也提到了，最佳的实践方法就是讲你的launcher icons全部移动到mipmap/文件夹下</p>
+<p>从文章的开头可以看到，其实在Android Studio中创建Project的时候，默认已经将所有的launcher icons移动到mipmap/文件夹下了。所以存放其他图片还得存放在drawable下。</p>
+<h5 id="另外附上drawable文件夹官方的描述"><strong>另外附上drawable/文件夹官方的描述：</strong></h5>
+<blockquote>
+<p>For bitmap files (PNG, JPEG, or GIF), 9-Patch image files, and XML files that describe Drawable shapes or Drawable objects that contain multiple states (normal, pressed, or focused). See the Drawable resource type.</p>
+</blockquote>
+
+          </div>
+        </div>
+
+        
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

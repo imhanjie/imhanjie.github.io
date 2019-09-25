@@ -1,0 +1,436 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Android Scroll 分析 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Android Scroll 分析</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2016-03-02</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <blockquote>
+<p>Android群英传第五章总结</p>
+</blockquote>
+<!--more-->
+<h3 id="一-滑动效果是如何产生的">一、滑动效果是如何产生的</h3>
+<p>滑动一个View本质上是移动一个View，原理和动画效果的实现非常相似，都是通过不断改变View坐标来实现这一效果的，所以实现滑动的思想基本是一致的：<strong>当触摸View时，系统记下当前触摸的坐标；当手指移动时，系统记下移动后的触摸点坐标，从而获取到相对于前一次坐标点的偏移量offset，并通过offset来修改View的坐标</strong>，这样不断重复，从而实现滑动过程。实现滑动的基本方法有7种。在实现之前，先来了解一下Android中View视图的一些基本概念。</p>
+<h3 id="二-android坐标系和视图坐标系的区别">二、Android坐标系和视图坐标系的区别</h3>
+<ul>
+<li>**Android坐标系：**将屏幕最左上角的顶点作为坐标系的原点，原点向右为x轴正方向，原点向下为y轴正方向</li>
+<li>**视图坐标系：**原点向右为x轴正方向，原点向下为y轴正方向，不过和Android坐标系不同，原点为其父视图左上角</li>
+</ul>
+<h3 id="三-触控事件motionevent">三、触控事件——MotionEvent</h3>
+<blockquote>
+<p>触控事件MotionEvent在用户交互中，占着举足轻重的定位。下面列出了MotionEvent中封装的一些常用的事件常量(前面三个最最常用)。</p>
+</blockquote>
+<pre><code class="language-java">// 单点触摸按下动作
+public static final int ACTION_DOWN = 0;
+// 单点触摸离开动作
+public static final int ACTION_UP = 1;
+// 触摸点移动动作
+public static final int ACTION_MOVE = 2;
+// 触摸动作取消
+public static final int ACTION_CANCEL = 3;
+// 触摸动作超出边界
+public static final int ACTION_OUTSIDE = 4;
+// 多点触摸按下动作
+public static final int ACTION_POINTER_DOWN = 5;
+// 多点离开动作
+public static final int ACTION_POINTER_UP = 6;
+</code></pre>
+<h4 id="android中系统提供了非常多的方法来获取坐标值相对距离等下面列举了一些很常用的api">Android中，系统提供了非常多的方法来获取坐标值，相对距离等，下面列举了一些很常用的API</h4>
+<h5 id="第一大类view提供的获取坐标的方法">第一大类：View提供的获取坐标的方法</h5>
+<ul>
+<li>getTop()：View自身的<strong>顶边</strong>到其父布局<strong>顶边</strong>的距离</li>
+<li>getLeft()：View自身的<strong>左边</strong>到其父布局<strong>左边</strong>的距离</li>
+<li>getRight()：View自身的<strong>右边</strong>到其父布局<strong>左边</strong>的距离</li>
+<li>getBottom()：View自身的<strong>底边</strong>到其父布局<strong>顶边</strong>的距离</li>
+</ul>
+<h5 id="第二大类motionevent提供的方法">第二大类：MotionEvent提供的方法</h5>
+<ul>
+<li>getX()：获取点击事件距离控件左边的距离，即视图坐标</li>
+<li>getY()：获取点击事件距离控件顶边的距离，即视图坐标</li>
+<li>getRawX()：获取点击事件距离整个屏幕左边的距离，即绝对坐标</li>
+<li>getRawY()：获取点击事件距离整个屏幕顶边的距离，即绝对坐标</li>
+</ul>
+<h3 id="四-实现滑动的七种方法">四、实现滑动的七种方法</h3>
+<blockquote>
+<p>在介绍方法之前，先给出获取偏移量的代码模板(使用的视图坐标，也可以使用绝对坐标来计算，但是要注意在使用绝对坐标时记得要重置mLastX和mLastY的值)：</p>
+</blockquote>
+<pre><code class="language-java">...
+private int mLastX;
+private int mLastY;
+...
+
+@Override
+    public boolean onTouchEvent(MotionEvent event) {
+        int x = (int) event.getX();
+        int y = (int) event.getY();
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN: {
+                mLastX = x;
+                mLastY = x;
+                break;
+            }
+            case MotionEvent.ACTION_MOVE: {
+                // 计算偏移量
+                int offsetX = x - mLastX;
+                int offsetY = y - mLastY;
+                break;
+            }
+            case MotionEvent.ACTION_UP: {
+                break;
+            }
+        }
+        return true;
+    }
+</code></pre>
+<h4 id="1-layout方法">1、layout方法</h4>
+<blockquote>
+<p>根据offsetX和offsetY来重新调用layout方法</p>
+</blockquote>
+<pre><code class="language-java">layout(getLeft() + offsetX, getTop() + offsetY, getRight() + offsetX, getBottom() + offsetY);
+</code></pre>
+<h4 id="2-offsetleftandright和offsettopandbottom">2、offsetLeftAndRight()和offsetTopAndBottom()</h4>
+<blockquote>
+<p>这个方法相当于系统提供了一个对左右、上下移动的API的封装(和第一种layout方法比，推荐这种)</p>
+</blockquote>
+<pre><code class="language-java">// 同时对left和right进行偏移
+offsetLeftAndRight(offsetX);
+// 同时对top和bottom进行偏移
+offsetTopAndBottom(offsetY);
+</code></pre>
+<h4 id="3-layoutparams">3、LayoutParams</h4>
+<blockquote>
+<p>LayoutParams保存了一个View的布局参数，因此在程序中通过改变LayoutParams来动态修改一个布局的位置参数，从而达到改变View位置的效果</p>
+</blockquote>
+<pre><code class="language-java">ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams) getLayoutParams();
+layoutParams.leftMargin = getLeft() + offsetX;
+layoutParams.topMargin = getTop() + offsetY;
+setLayoutParams(layoutParams);
+</code></pre>
+<h4 id="4-scrollto和scrollby">4、scrollTo和scrollBy</h4>
+<blockquote>
+<p>scrollTo和scrollBy移动的是其父布局大小的面板(可视区域)，可以理解为手机后面有一块大大的画布，scrollTo和scrollBy移动的时手机面板，后面的画布保持不动，所以如果将面板向左上移动滑动，后面的画布视图将向右下移动，所以为了和我们手指滑动的方向一致，offsetX和offsetY必须取其对应的负数</p>
+</blockquote>
+<pre><code class="language-java">((View) getParent()).scrollBy(-offsetX, -offsetY);
+</code></pre>
+<h4 id="5-scroller">5、Scroller</h4>
+<p>使用Scroller的步骤：</p>
+<ul>
+<li>初始化Scroller</li>
+</ul>
+<pre><code class="language-java">mScroller = new Scroller(context);
+</code></pre>
+<ul>
+<li>重写computeScroll()方法，实现模拟滑动</li>
+</ul>
+<pre><code class="language-java">    @Override
+    public void computeScroll() {
+        super.computeScroll();
+        if (mScroller.computeScrollOffset()) {
+            int currX = mScroller.getCurrX();
+            int currY = mScroller.getCurrY();
+            ((View) getParent()).scrollTo(currX, currY);
+			// 再次触发computeScroller()方法
+            invalidate();
+        }
+    }
+</code></pre>
+<ul>
+<li>startScroll开启模拟过程</li>
+</ul>
+<pre><code class="language-java">            case MotionEvent.ACTION_UP: {
+                int scrollX = ((View) getParent()).getScrollX();
+                int scrollY = ((View) getParent()).getScrollY();
+                mScroller.startScroll(
+                        scrollX,
+                        scrollY,
+                        -scrollX,
+                        -scrollY);
+                Log.d(&quot;bingo&quot;, &quot;UP:scrollX:&quot; + scrollX + &quot;   scrollY&quot; + scrollY);
+				// 触发computeScroller()方法
+                invalidate();
+                break;
+            }
+</code></pre>
+<h4 id="6-属性动画">6、属性动画</h4>
+<h4 id="7-viewdraghelper">7、ViewDragHelper</h4>
+<blockquote>
+<p>support库中的DrawerLayout和SlidingPaneLayout两个强大的布局背后就是靠ViewDragHelper来实现的，通过ViewDragHelper，基本可以实现各种不同的滑动、拖放需求，因此这个方法也是各种滑动解决方案中的终极绝</p>
+</blockquote>
+<p>下面通过一个简单仿Android手机QQ的侧滑菜单的实现来基本使用下ViewDragHelper，详细的解释中代码已经给出注释</p>
+<pre><code class="language-java">public class DragViewGroup extends FrameLayout {
+
+    private ViewDragHelper mViewDragHelper;
+    private View mMenuView;
+    private View mMainView;
+    private int mWidth;
+
+    public DragViewGroup(Context context) {
+        super(context);
+    }
+
+    public DragViewGroup(Context context, AttributeSet attrs) {
+        this(context, attrs, 0);
+    }
+
+    public DragViewGroup(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        initView();
+    }
+
+    private void initView() {
+        /**
+         * 初始化ViewDragHelper，第一个参数是要监听的View，通常是一个
+         * ViewGroup(此类也是继承FrameLayout的)，第二个参数是一个Callback回调，
+         * 这个回调就是整个ViewDragHelper的逻辑核心
+         */
+        mViewDragHelper = ViewDragHelper.create(this, callback);
+    }
+
+    @Override
+    protected void onFinishInflate() {
+        super.onFinishInflate();
+        mMenuView = getChildAt(0);
+        mMainView = getChildAt(1);
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        mWidth = mMenuView.getMeasuredWidth();
+    }
+
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        /**
+         * 拦截事件：将事件传递给ViewDragHelper进行处理
+         */
+        return mViewDragHelper.shouldInterceptTouchEvent(ev);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        /**
+         * 拦截事件：将触摸事件传递给ViewDragHelper，此操作必不可少
+         */
+        mViewDragHelper.processTouchEvent(event);
+        return true;
+    }
+
+    /**
+     * 处理computeScroll()：因为ViewDragHelper内部也是通过Scroller来实现平滑移动的
+     * (一般写下面的代码模板即可)
+     */
+    @Override
+    public void computeScroll() {
+        if (mViewDragHelper.continueSettling(true)) {
+            ViewCompat.postInvalidateOnAnimation(this);
+        }
+    }
+
+    /**
+     * 处理回调Callback
+     */
+    private ViewDragHelper.Callback callback = new ViewDragHelper.Callback() {
+
+        /**
+         * 何时开始检测触摸事件
+         */
+        @Override
+        public boolean tryCaptureView(View child, int pointerId) {
+            // 如果当前触摸的child是mMainView时开始检测
+            return mMainView == child;// 指定mMainView可以被移动拖动
+        }
+
+        /**
+         * 处理垂直滑动
+         */
+        @Override
+        public int clampViewPositionVertical(View child, int top, int dy) {
+            return 0; // 返回值为0则不发生滑动
+        }
+
+        /**
+         * 处理水平滑动
+         */
+        @Override
+        public int clampViewPositionHorizontal(View child, int left, int dx) {
+            Log.d(&quot;bingo&quot;, &quot;left:&quot; + left + &quot;  dx:&quot; + dx);
+//            if (dx &gt; 0) {
+//                return left + 10;
+//            } else {
+//                return left - 10;
+//            }
+            /**
+             * 返回值可以控制滑动的距离，根据dx可以判断是左滑还是右滑，这里return left
+             * 代表滑动和手指滑动的距离一样
+             */
+            return left;
+        }
+
+        /**
+         * 拖动结束后调用(手指离开屏幕时调用)
+         */
+        @Override
+        public void onViewReleased(View releasedChild, float xvel, float yvel) {
+            // 手指抬起后缓慢移动到指定位置
+            if (mMainView.getLeft() &lt; 500) {
+                // 关闭菜单
+                // 相当于Scroller的startScroll方法
+                mViewDragHelper.smoothSlideViewTo(mMainView, 0, 0);
+                ViewCompat.postInvalidateOnAnimation(DragViewGroup.this);
+            } else {
+                // 打开菜单
+                mViewDragHelper.smoothSlideViewTo(mMainView, mWidth / 2, 0);
+                ViewCompat.postInvalidateOnAnimation(DragViewGroup.this);
+            }
+        }
+    };
+
+}
+</code></pre>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/ListView使用技巧">
+              <h3 class="post-title">
+                下一篇：ListView使用技巧
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

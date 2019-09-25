@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://imhanjie.github.io/</id>
     <title>Melody</title>
-    <updated>2019-09-23T15:27:52.413Z</updated>
+    <updated>2019-09-25T08:10:28.542Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://imhanjie.github.io/"/>
     <link rel="self" href="https://imhanjie.github.io//atom.xml"/>
@@ -10,6 +10,1559 @@
     <logo>https://imhanjie.github.io//images/avatar.png</logo>
     <icon>https://imhanjie.github.io//favicon.ico</icon>
     <rights>All rights reserved 2019, Melody</rights>
+    <entry>
+        <title type="html"><![CDATA[RxJava 2 | retryWhen 操作符源码分析]]></title>
+        <id>https://imhanjie.github.io//post/rxjava-retryWhen-analysis</id>
+        <link href="https://imhanjie.github.io//post/rxjava-retryWhen-analysis">
+        </link>
+        <updated>2019-07-18T02:41:08.000Z</updated>
+        <content type="html"><![CDATA[<!--more-->
+<h3 id="基本使用">基本使用</h3>
+<p><code>retryWhen</code> 操作符的作用是在上游发射了一个错误事件时，可以根据条件自己决定是否进行重试，让上游重新发送事件。在开发中也是一个非常有用的操作符，例如它可以用来在网络请求失败时要求其进行重试，重新去进行网络请求。</p>
+<p>下面是一个简单的使用案例：</p>
+<pre><code class="language-java">Observable
+        .create((ObservableOnSubscribe&lt;String&gt;) e -&gt; {
+            e.onNext(&quot;A&quot;);
+            e.onNext(&quot;B&quot;);
+            e.onError(new RuntimeException(&quot;always on error!&quot;));
+            e.onNext(&quot;C&quot;);
+            e.onComplete();
+        })
+        .retryWhen(attempts -&gt; {
+            System.out.println(&quot;retryWhen: apply()&quot;);
+            return attempts.flatMap(throwable -&gt; {
+                System.out.println(&quot;attempts: flatMap apply() -&gt; &quot; + throwable);
+                return Observable.just(&quot;just retry!&quot;);
+            });
+        })
+        .subscribe(new Observer&lt;String&gt;() {
+            @Override
+            public void onSubscribe(Disposable d) {
+                System.out.println(&quot;onSubscribe()&quot;);
+            }
+
+            @Override
+            public void onNext(String s) {
+                System.out.println(&quot;onNext(): &quot; + s);
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                System.out.println(&quot;onError(): &quot; + e);
+            }
+
+            @Override
+            public void onComplete() {
+                System.out.println(&quot;onComplete()&quot;);
+            }
+        });
+</code></pre>
+<p>输出结果如下：</p>
+<pre><code>retryWhen: apply()
+onSubscribe()
+onNext(): A
+onNext(): B
+attempts: flatMap apply() -&gt; java.lang.RuntimeException: always on error!
+onNext(): A
+onNext(): B
+attempts: flatMap apply() -&gt; java.lang.RuntimeException: always on error!
+onNext(): A
+onNext(): B
+attempts: flatMap apply() -&gt; java.lang.RuntimeException: always on error!
+...
+</code></pre>
+<p>如果将以上代码中的：</p>
+<pre><code class="language-java">return Observable.just(&quot;just retry!&quot;);
+</code></pre>
+<p>更改为下面这样：</p>
+<pre><code class="language-java">return Observable.error(new RuntimeException(&quot;shutdown!&quot;))
+</code></pre>
+<p>再看输出结果：</p>
+<pre><code>retryWhen: apply()
+onSubscribe()
+onNext(): A
+onNext(): B
+attempts: flatMap apply()
+onError(): java.lang.RuntimeException: shutdown!
+</code></pre>
+<p>为了下面理解方便，将上面的代码改写成下面 👇 这样，代码逻辑一模一样，只是不使用链式调用并且去掉了 <code>retryWhen</code> 的 lambda 表达式，拆分出上游 <code>upStream</code> 和下游 <code>downStream</code> 的概念：</p>
+<pre><code class="language-java">// 上游
+Observable&lt;String&gt; upStream = Observable.create(e -&gt; {
+    e.onNext(&quot;A&quot;);
+    e.onNext(&quot;B&quot;);
+    e.onError(new RuntimeException(&quot;always on error!&quot;));
+    e.onNext(&quot;C&quot;);
+    e.onComplete();
+});
+
+// 下游
+Observer&lt;String&gt; downStream = new Observer&lt;String&gt;() {
+    @Override
+    public void onSubscribe(Disposable d) {
+        System.out.println(&quot;onSubscribe()&quot;);
+    }
+
+    @Override
+    public void onNext(String s) {
+        System.out.println(&quot;onNext(): &quot; + s);
+    }
+
+    @Override
+    public void onError(Throwable e) {
+        System.out.println(&quot;onError(): &quot; + e);
+    }
+
+    @Override
+    public void onComplete() {
+        System.out.println(&quot;onComplete()&quot;);
+    }
+};
+
+// retryWhen
+upStream.retryWhen(new Function&lt;Observable&lt;Throwable&gt;, ObservableSource&lt;?&gt;&gt;() {
+    @Override
+    public ObservableSource&lt;?&gt; apply(Observable&lt;Throwable&gt; attempts) throws Exception {
+        System.out.println(&quot;retryWhen: apply()&quot;);
+        return attempts.flatMap(throwable -&gt; {
+            System.out.println(&quot;attempts: flatMap apply() -&gt; &quot; + throwable);
+            Thread.sleep(1000);
+            return Observable.just(&quot;just retry&quot;);
+        });
+    }
+}).subscribe(downStream);
+</code></pre>
+<p>以上就是 <code>retryWhen</code> 操作符的基本使用，如果在 <code>retryWhen</code> 中 <code>return</code> 返回的流发射了：</p>
+<ul>
+<li>一个正常事件，即代表重试，会重新发射上游的事件。</li>
+<li>一个错误事件，即代表不想重试，会立即调用下游的 <code>onError()</code> 方法，并且会将这个错误事件中的异常信息作为参数传过去。</li>
+</ul>
+<p>从上面的输出还可以得出一个结论，<code>retryWhen</code> 的 <code>Function</code> 的 <code>apply()</code> 方法<strong>只会被调用一次</strong>，并且是在下游 <code>onSubscribe()</code>  方法之前调用，<strong>并不是在每次上游出错都会去调用</strong>。</p>
+<p>在 <code>retryWhen</code> 的 <code>Function</code> 的 <code>apply()</code> 方法中有一个 <code>Observable&lt;Throwable&gt; attempts</code> 参数，这是一个流，是 <code>retryWhen</code> 操作符内部 ( 准确的是 <code>ObservableRetryWhen</code> 内 ) 的一个流，当上游出错时，虽然 <code>retryWhen</code> 的 <code>Function</code> 的 <code>apply()</code> 方法不会被调用，但是会将每次错误信息从 <code>attempts</code> 中发射出去，所以上游每出现错误时，<code>attempts</code> 就会发射一次，所以我们可以根据 <code>attempts</code> 的错误信息来决定是否重试。</p>
+<p>以上结论会在下面源码分析中得到论证。</p>
+<h3 id="流程分析">流程分析</h3>
+<p>首先看 <code>create()</code> ：</p>
+<pre><code class="language-java">public static &lt;T&gt; Observable&lt;T&gt; create(ObservableOnSubscribe&lt;T&gt; source) {
+    ObjectHelper.requireNonNull(source, &quot;source is null&quot;);
+    return RxJavaPlugins.onAssembly(new ObservableCreate&lt;T&gt;(source));
+}
+</code></pre>
+<p>例子中创建上游时使用的是 <code>create()</code> 操作符，此时流 <code>Observable</code> 的实际类型为 <code>ObservableCreate</code> ，然后经过  <code>retryWhen</code> ：</p>
+<pre><code class="language-java">public final Observable&lt;T&gt; retryWhen(
+    final Function&lt;? super Observable&lt;Throwable&gt;, ? extends ObservableSource&lt;?&gt;&gt; handler) {
+    ObjectHelper.requireNonNull(handler, &quot;handler is null&quot;);
+    return RxJavaPlugins.onAssembly(new ObservableRetryWhen&lt;T&gt;(this, handler));
+}
+</code></pre>
+<p>经过 <code>retryWhen</code> 操作符后，流的类型变为 <code>ObservableRetryWhen</code> ，然后下游订阅上游调用 <code>subscribe()</code> 时，调用的是 <code>ObservableRetryWhen</code> 的 <code>subscribe()</code> 方法，内部会最终调用其 <code>subscribeActual()</code> 方法：</p>
+<pre><code class="language-java">@Override
+protected void subscribeActual(Observer&lt;? super T&gt; observer) {
+  	// 信号源，即上文中提到的 attempts
+    Subject&lt;Throwable&gt; signaller = PublishSubject.&lt;Throwable&gt;create().toSerialized();
+		
+    ObservableSource&lt;?&gt; other;
+
+    try {
+      	// 所以 other 就是我们在 retryWhen 里面返回的那个流，即 Observable.just(&quot;just retry!&quot;)
+        other = ObjectHelper.requireNonNull(handler.apply(signaller), &quot;The handler returned a null ObservableSource&quot;);
+    } catch (Throwable ex) {
+        Exceptions.throwIfFatal(ex);
+        EmptyDisposable.error(ex, observer);
+        return;
+    }
+
+    RepeatWhenObserver&lt;T&gt; parent = new RepeatWhenObserver&lt;T&gt;(observer, signaller, source);
+    observer.onSubscribe(parent);
+
+    other.subscribe(parent.inner);
+
+    parent.subscribeNext();
+}
+</code></pre>
+<h4 id="signaller">signaller</h4>
+<p>在 <code>ObservableRetryWhen</code> 被订阅时首先会创建一个信号源 <code>signaller</code>，即上文中提到的 <code>attempts</code> ，用来发射上游出现的错误。</p>
+<h4 id="other">other</h4>
+<pre><code class="language-java">other = ObjectHelper.requireNonNull(handler.apply(signaller)
+</code></pre>
+<p><code>handler</code> 就是 <code>retryWhen</code> 的参数 <code>Function</code> ，可以看到在调用 <code>Function</code> 的 <code>apply()</code> 函数时将 <code>signaller</code> 作为参数 传过去了，就是刚刚外面提到的 <code>attempts</code> 参数，所以 <code>other</code> 就是 <code>Function</code> 的返回值，即使用 <code>retryWhen</code> 操作符返回的那个流：</p>
+<pre><code class="language-java">Observable.just(&quot;just retry!&quot;)
+</code></pre>
+<h4 id="repeatwhenobserver">RepeatWhenObserver</h4>
+<p><code>RepeatWhenObserver</code> 在 <code>ObservableRetryWhen</code> 内部将原始的上游 <code>source</code> ( <code>upstream</code> ) 以及原始的下游 <code>observer</code> ( <code>downstream</code> ) 封装起来，通过其变量名 <code>parent</code> 也可以看出其代表的意思为 <code>retryWhen</code> 操作符的上游。</p>
+<h4 id="订阅关系">订阅关系</h4>
+<pre><code class="language-java">other.subscribe(parent.inner);
+</code></pre>
+<p><code>parent.inner</code> 即 <code>RepeatWhenObserver</code> 的内部类 <code>InnerRepeatObserver</code> 订阅了我们返回的流。下面会提到，这里只需要知道 <code>parent.inner</code> 订阅了我们返回的 <code>Observable.just(&quot;just retry!&quot;)</code> 即可。</p>
+<pre><code class="language-java">parent.subscribeNext();
+</code></pre>
+<p>再看 <code>RepeatWhenObserver</code> 的 <code>subscribeNext()</code> 方法：</p>
+<pre><code class="language-java">void subscribeNext() {
+    if (wip.getAndIncrement() == 0) {
+
+        do {
+            if (isDisposed()) {
+                return;
+            }
+
+            if (!active) {
+                active = true;
+                source.subscribe(this);
+            }
+        } while (wip.decrementAndGet() != 0);
+    }
+}
+</code></pre>
+<p>内部会让 <code>RepeatWhenObserver</code> 自己订阅我们的原始上游 <code>source</code> ( <code>upstream</code> ) 。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">被观察者</th>
+<th>观察者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>upstream ( 原始流 )</strong></td>
+<td><strong>RepeatWhenObserver</strong></td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>other ( retryWhen 中我们返回的流 )</strong></td>
+<td><strong>InnerRepeatObserver</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="重试机制">重试机制</h4>
+<p>在将重试机制之前，会先分析正常的流程，即上游不会抛出错误不重试的流程，然后再分析错误重试的流程，即上游发射错误事件触发重试的流程。</p>
+<h5 id="正常不重试流程">正常不重试流程</h5>
+<p>还是按照上面的例子，上游 <code>upstream</code> 首先发射 <code>A</code> ，由订阅关系得知会触发 <code>RepeatWhenObserver</code> 的 <code>onNext()</code> 方法：</p>
+<pre><code class="language-java">@Override
+public void onNext(T t) {
+    HalfSerializer.onNext(downstream, t, this, error);
+}
+</code></pre>
+<pre><code class="language-java">public static &lt;T&gt; void onNext(Observer&lt;? super T&gt; observer, T value,
+        AtomicInteger wip, AtomicThrowable error) {
+    if (wip.get() == 0 &amp;&amp; wip.compareAndSet(0, 1)) {
+        observer.onNext(value);
+        ...
+    }
+}
+</code></pre>
+<p>此处的 <code>observer</code> 就是真正的下游 <code>downstream</code>。可以看到内部会调用 <code>downstream</code> 的 <code>onNext()</code> 方法，完成转发操作。</p>
+<h5 id="错误重试流程">错误重试流程</h5>
+<p>按照上面的例子，上游 <code>upstream</code> 模拟出错会发射 <code>RuntimeException(&quot;always on error!&quot;)</code> 事件，由订阅关系得知会触发 <code>RepeatWhenObserver</code> 的 <code>onError()</code> 方法：</p>
+<pre><code class="language-java">@Override
+public void onError(Throwable e) {
+    DisposableHelper.replace(upstream, null);
+    active = false;
+    signaller.onNext(e);
+}
+</code></pre>
+<p>很明显，在这里拿到上游的异常信息后，将异常信息通过 <code>signaller</code> 流发射了出去。<code>signaller</code> 即 <code>retryWhen</code> 参数 <code>Function</code> 中 <code>apply()</code> 方法的参数 <code>attempts</code> 。</p>
+<p>这里先不必探究谁会订阅 <code>signaller</code> 流，我们先看 <code>other</code> 参数，就是我们在 <code>retryWhen</code> 中返回的流，它是被 <code>InnerRepeatObserver</code> 所订阅着的，如果我们返回的流 <code>other</code> 发射了一个正常时间，来看看会怎样，它会触发 <code>InnerRepeatObserver</code> 的 <code>onNext()</code> 方法：</p>
+<pre><code class="language-java">final class InnerRepeatObserver extends AtomicReference&lt;Disposable&gt; implements Observer&lt;Object&gt; {
+
+    private static final long serialVersionUID = 3254781284376480842L;
+
+    @Override
+    public void onSubscribe(Disposable d) {
+        DisposableHelper.setOnce(this, d);
+    }
+
+    @Override
+    public void onNext(Object t) {
+        innerNext();
+    }
+
+    @Override
+    public void onError(Throwable e) {
+        innerError(e);
+    }
+
+    @Override
+    public void onComplete() {
+        innerComplete();
+    }
+}
+</code></pre>
+<p><code>InnerRepeatObserver</code> 是 <code>RepeatWhenObserver</code> 的一个内部类，所以它的 <code>onNext()</code> 中调用的 <code>innerNext()</code> 方法为 <code>RepeatWhenObserver</code> 的：</p>
+<pre><code class="language-java">void innerNext() {
+    subscribeNext();
+}
+</code></pre>
+<p>这样就清楚了，里面又调用 <code>RepeatWhenObserver</code> 的 <code>subscribeNext()</code> 方法，上面已经分析过了，该方法会让 <code>RepeatWhenObserver</code> 自己订阅我们的原始上游 <code>source</code> ( <code>upstream</code> ) 。</p>
+<p>所以我们只要让 <code>other</code> 即我们返回的流发射一次 <code>onNext()</code> 事件即可完成重新订阅达到重试，那怎么触发 <code>other</code> 发射事件呢？答案就是上面的 <code>signaller</code> 。上游出错时，会导致 <code>signaller</code> 将错误信息当成正常时间发射出去，所以我们只要让 <code>signaller</code> 触发 <code>other</code> 即可，可以理解为只要将 <code>other</code> 和 <code>signaller</code> 相连接即可：</p>
+<pre><code class="language-java">upStream.retryWhen(new Function&lt;Observable&lt;Throwable&gt;, ObservableSource&lt;?&gt;&gt;() {
+    @Override
+    public ObservableSource&lt;?&gt; apply(Observable&lt;Throwable&gt; attempts) throws Exception {
+        System.out.println(&quot;retryWhen: apply()&quot;);
+        return attempts.flatMap(throwable -&gt; {
+            System.out.println(&quot;attempts: flatMap apply() -&gt; &quot; + throwable);
+            Thread.sleep(1000);
+            return Observable.just(&quot;just retry&quot;);
+        });
+    }
+}).subscribe(downStream);
+</code></pre>
+<p>在 <code>attempts.flatMap</code> 中，我们还可以拿到 <code>attempts</code> 中的错误信息来判断是否重试，如果重试只要发射一个正常事件即可，向上面的例子一样，那不想重试了呢？只要发射一个 <code>onError()</code> 错误事件即可。由上面 <code>InnerRepeatObserver</code> 源码可以看到如果发射了一个错误事件，会调用 <code>RepeatWhenObserver</code> 的 <code>innerError()</code> 方法：</p>
+<pre><code class="language-java">void innerError(Throwable ex) {
+    DisposableHelper.dispose(upstream);
+    HalfSerializer.onError(downstream, ex, this, error);
+}
+</code></pre>
+<pre><code class="language-java">public static void onError(Observer&lt;?&gt; observer, Throwable ex,
+        AtomicInteger wip, AtomicThrowable error) {
+    if (error.addThrowable(ex)) {
+        if (wip.getAndIncrement() == 0) {
+            observer.onError(error.terminate());
+        }
+    } else {
+        RxJavaPlugins.onError(ex);
+    }
+}
+</code></pre>
+<p>可以看到内部会调用 <code>downstream</code> 的 <code>onError()</code> 方法，完成转发操作。</p>
+<p>至此已经分析完了，下面附上流程图方便理解：</p>
+<blockquote>
+<p>RWO : <code>RepeatWhenObserver</code></p>
+<p>IRO : <code>InnerRepeatObserver</code></p>
+</blockquote>
+<figure data-type="image" tabindex="1"><img src="http://ww3.sinaimg.cn/large/006tNc79ly1g543bldi53j31a80u0jvr.jpg" alt=""></figure>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Java 动态代理及源码简析]]></title>
+        <id>https://imhanjie.github.io//post/java-dynamic-proxy</id>
+        <link href="https://imhanjie.github.io//post/java-dynamic-proxy">
+        </link>
+        <updated>2019-02-23T06:21:56.000Z</updated>
+        <summary type="html"><![CDATA[<p>Android 中的 Retrofit 框架以及 Spring AOP 的内部实现都是基于 Java 动态代理机制来实现的，所以理解 Java 动态代理机制有助于我们阅读框架源码以及理解其实现思路。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>Android 中的 Retrofit 框架以及 Spring AOP 的内部实现都是基于 Java 动态代理机制来实现的，所以理解 Java 动态代理机制有助于我们阅读框架源码以及理解其实现思路。</p>
+<!--more-->
+<p>Java 有两种代理方式，一种是<strong>静态代理</strong>，另外一种就是本文所介绍的<strong>动态代理</strong>。</p>
+<h3 id="静态代理">静态代理</h3>
+<p>静态代理比较简单，静态代理代理的是一个类，代理类和委托类（被代理类）都实现相同的接口，然后代理类内部持有委托类的引用，客户端只需要与代理类打交道，客户端调用代理类的方法时，代理类内部再调用委托类的方法，但在调用委托类方法的前后，代理类可以插入自己的代码，执行自己的逻辑，下面是一个静态代理的简单代码演示。</p>
+<pre><code class="language-java">public interface IAnimal {
+
+    void say(String word);
+
+}
+</code></pre>
+<pre><code class="language-java">public class Cat implements IAnimal {
+
+    @Override
+    public void say(String word) {
+        System.out.println(&quot;Cat: say()--&gt;&quot; + word);
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">public class StaticAnimalProxy implements IAnimal{
+
+    private IAnimal animal;
+
+    public StaticAnimalProxy(IAnimal animal) {
+        this.animal = animal;
+    }
+
+    @Override
+    public void say(String word) {
+        System.out.println(&quot;静态代理前置代码&quot;);
+        animal.say(word);
+        System.out.println(&quot;静态代理后置代码&quot;);
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">StaticAnimalProxy proxy = new StaticAnimalProxy(new Cat());
+proxy.say(&quot;hello!&quot;);
+</code></pre>
+<pre><code>输出:
+
+静态代理前置代码
+Cat: say()--&gt;hello!
+静态代理后置代码
+</code></pre>
+<h3 id="动态代理">动态代理</h3>
+<p>上面说到静态代理代理的是一个类，动态代理代理的是一个接口，要想实现动态代理，必须要实现 <code>InvocationHandler</code> 这个接口，这个实现类可以理解为是一个调用处理器 (Handler)，通过这个 <code>InvocationHandler</code> 的实现类和 <code>Proxy</code> 类的 <code>newProxyInstance()</code> 方法可以动态生成任何接口的代理类，下面是一个实现动态代理的例子。</p>
+<pre><code class="language-java">public class DynamicProxyHandler implements InvocationHandler {
+    
+    // 被代理的对象
+    private Object target;
+
+    public DynamicProxyHandler(Object target) {
+        this.target = target;
+    }
+
+    @Override
+    public Object invoke(Object object, Method method, Object[] args) throws Throwable {
+        System.out.println(&quot;动态代理前置代码&quot;);
+        // 这里真正调用被代理对象的方法，返回结果是方法的返回值，在这行代码前后可以实现额外的逻辑，实现代理功能。
+        Object result = method.invoke(target, args);
+        System.out.println(&quot;动态代理后置代码&quot;);
+        return result;
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">// 被代理的对象 cat
+Cat cat = new Cat();
+// 创建调用处理器，将 cat 作为参数传递进去，让处理器持有被代理对象 cat 的引用
+DynamicProxyHandler proxyHandler = new DynamicProxyHandler(cat);
+// 因为 Cat 实现了 IAnimal 接口，所以这里生成动态生成一个 IAnimal 的代理类
+IAnimal animal = (IAnimal) Proxy.newProxyInstance(IAnimal.class.getClassLoader(), new Class[]{IAnimal.class}, proxyHandler);
+animal.say(&quot;hello!&quot;);
+// 返回的 animal 实际上不是真正的 animal，而是 animal 的代理类 com.sun.proxy.$Proxy0
+System.out.println(animal.getClass().getCanonicalName());
+</code></pre>
+<pre><code class="language-java">动态代理前置代码
+Cat: say()--&gt;hello!
+动态代理后置代码
+com.sun.proxy.$Proxy0
+</code></pre>
+<h3 id="静态代理和动态代理的比较">静态代理和动态代理的比较</h3>
+<ul>
+<li>
+<p>静态代理代理的是一个类，动态代理的是接口。</p>
+</li>
+<li>
+<p>静态代理类在程序运行之前代理类 (.class) 就存在了，而动态代理是在程序运行时通过反射机制动态生成代理类。</p>
+<blockquote>
+<p>StaticAnimalProxy 只能代理 IAnimal 的实现类。</p>
+<p>DynamicProxyHandler 内部代理的是一个 Object，<code>Proxy.newProxyInstance</code> 方法可以为任一接口代理生成代理类，上面的例子代理的是 IAnimal 的代理类，当然也可以代理其他接口。</p>
+</blockquote>
+</li>
+<li>
+<p>相较于静态代理，动态代理的优点是实现无侵入式的代码扩展，可以在不修改源码的情况下去增强一些方法，在方法的前后做自己想做的事情，此外也还可以减少代码量，若使用静态代理，如果类的方法比较多的时候，需要手写大量的代码，而动态代理只需要在 <code>InvocationHandler</code> 的 <code>invoke()</code> 方法中处理即可。</p>
+</li>
+<li>
+<p>Java 的动态代理只能代理接口，若要动态代理类需要使用 <code>CGLIB</code> 库。</p>
+</li>
+</ul>
+<h3 id="动态代理源码简析">动态代理源码简析</h3>
+<p>从上面可以看到动态代理类是由 <code>Proxy.newProxyInstance()</code> 方法动态生成的，所以我们只需要从看这个方法就行了。</p>
+<pre><code class="language-java">public static Object newProxyInstance(ClassLoader loader,
+                                      Class&lt;?&gt;[] interfaces,
+                                      InvocationHandler h)
+    throws IllegalArgumentException {
+    Objects.requireNonNull(h);
+
+    ...
+
+        /*
+         * Look up or generate the designated proxy class.
+         * 生成代理类 Class 对象
+         */
+        Class&lt;?&gt; cl = getProxyClass0(loader, intfs);
+
+    /*
+         * Invoke its constructor with the designated invocation handler.
+         * 反射获取构造器生成代理类实例对象返回给调用者
+         */
+    try {
+        ...
+            final Constructor&lt;?&gt; cons = cl.getConstructor(constructorParams);
+        final InvocationHandler ih = h;
+        ...
+            return cons.newInstance(new Object[]{h});
+    } catch (IllegalAccessException | InstantiationException e) {
+        throw new InternalError(e.toString(), e);
+    } catch (InvocationTargetException e) {
+        Throwable t = e.getCause();
+        if (t instanceof RuntimeException) {
+            throw (RuntimeException) t;
+        } else {
+            throw new InternalError(t.toString(), t);
+        }
+    } catch (NoSuchMethodException e) {
+        throw new InternalError(e.toString(), e);
+    }
+}
+</code></pre>
+<p>再主要看 <code>getProxyClass0()</code> 方法是如何生成代理类 Class 对象的。</p>
+<pre><code class="language-java">/**
+     * Generate a proxy class.  Must call the checkProxyAccess method
+     * to perform permission checks before calling this.
+     */
+private static Class&lt;?&gt; getProxyClass0(ClassLoader loader,
+                                       Class&lt;?&gt;... interfaces) {
+    if (interfaces.length &gt; 65535) {
+        throw new IllegalArgumentException(&quot;interface limit exceeded&quot;);
+    }
+
+    // If the proxy class defined by the given loader implementing
+    // the given interfaces exists, this will simply return the cached copy;
+    // otherwise, it will create the proxy class via the ProxyClassFactory
+    return proxyClassCache.get(loader, interfaces);
+}
+</code></pre>
+<p><code>proxyClassCache</code> 缓存了代理类对象，方便复用，<code>proxyClassCache = new WeakCache&lt;&gt;(new KeyFactory(), new ProxyClassFactory());</code> <code>proxyClassCache</code> 是一个 <code>WeakCache</code> 对象，其构造器的 <code>ProxyClassFactory</code> 对象很重要，看名字就知道了，这个类就是专门来生成代理类的，上面的 <code>proxyClassCache.get()</code> 方法最终也是调用了其 <code>apply()</code> 方法来生成并返回的代理类，所以下面来看 <code>ProxyClassFactory</code> 的 <code>apply()</code> 方法的内部实现。</p>
+<pre><code class="language-java">@Override
+public Class&lt;?&gt; apply(ClassLoader loader, Class&lt;?&gt;[] interfaces) {
+
+    Map&lt;Class&lt;?&gt;, Boolean&gt; interfaceSet = new IdentityHashMap&lt;&gt;(interfaces.length);
+    for (Class&lt;?&gt; intf : interfaces) {
+        /*
+             * Verify that the class loader resolves the name of this
+             * interface to the same Class object.
+             * 验证 Proxy.newProxyInstance() 传寄来的 classLoader 和 interfaces 是否有效
+             */
+        Class&lt;?&gt; interfaceClass = null;
+        try {
+            interfaceClass = Class.forName(intf.getName(), false, loader);
+        } catch (ClassNotFoundException e) {
+        }
+        if (interfaceClass != intf) {
+            throw new IllegalArgumentException(
+                intf + &quot; is not visible from class loader&quot;);
+        }
+        /*
+             * Verify that the Class object actually represents an
+             * interface.
+             * 这里为了验证要代理的是否为接口，若不是接口则会抛出异常
+             */
+        if (!interfaceClass.isInterface()) {
+            throw new IllegalArgumentException(
+                interfaceClass.getName() + &quot; is not an interface&quot;);
+        }
+        ...
+    }
+
+    ...
+
+        /*
+         * Choose a name for the proxy class to generate.
+         * 为代理类生成一个名字，这里 proxyClassNamePrefix 值为 &quot;$Proxy&quot; num 从 0 开始，
+         * 所以这里解释了为什么生成出来的代理类名字时 $Proxy0
+         */
+        long num = nextUniqueNumber.getAndIncrement();
+    String proxyName = proxyPkg + proxyClassNamePrefix + num;
+
+    /*
+         * Generate the specified proxy class.
+         * 最终生成代理类 class 二级制文件，并存储来了本地，也就是运行时动态生成出了 .class 文件
+         */
+    byte[] proxyClassFile = ProxyGenerator.generateProxyClass(
+        proxyName, interfaces, accessFlags);
+    try {
+        return defineClass0(loader, proxyName,
+                            proxyClassFile, 0, proxyClassFile.length);
+    } catch (ClassFormatError e) {
+        /*
+             * A ClassFormatError here means that (barring bugs in the
+             * proxy class generation code) there was some other
+             * invalid aspect of the arguments supplied to the proxy
+             * class creation (such as virtual machine limitations
+             * exceeded).
+             */
+        throw new IllegalArgumentException(e.toString());
+    }
+}
+</code></pre>
+<p>当然我们也可以自己手动调用 <code>ProxyGenerator.generateProxyClass()</code> 方法来生成 <code>.class</code> 文件，然后反编译查看里面的内容，内部其实生成了接口的各个方法，然后再各个方法内部调用了 <code>h (InvocationHandler)</code> 的 <code>invoke(Object proxy, Method method, Object[] args)</code> 方法，转到了调用层。</p>
+<ul>
+<li><code>proxy</code> : 代理类</li>
+<li><code>method</code> : 调用的方法信息</li>
+<li><code>args</code> : 调用该方法的参数</li>
+</ul>
+<p>以上就是 Java 动态代理的介绍与分析，Spring 的 AOP 以及 Android Retrofit 框架的接口注解实现就是基于动态代理实现的，好像是基于 CGLIB，不过原理大多都是想通的。</p>
+<h3 id="参考文章">参考文章</h3>
+<ul>
+<li>
+<p><a href="https://www.cnblogs.com/flyoung2008/p/3251148.html">彻底理解JAVA动态代理</a></p>
+</li>
+<li>
+<p><a href="https://juejin.im/post/5c70094051882562a12aec51">深入理解动态代理</a></p>
+</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Android Jetpack 系列之 Lifecycles]]></title>
+        <id>https://imhanjie.github.io//post/android-jetpack-lifecycles</id>
+        <link href="https://imhanjie.github.io//post/android-jetpack-lifecycles">
+        </link>
+        <updated>2019-01-16T06:51:51.000Z</updated>
+        <summary type="html"><![CDATA[<p>基于观察者模式的生命周期感知组件。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>基于观察者模式的生命周期感知组件。</p>
+<!-- more -->
+<h3 id="介绍">介绍</h3>
+<p>如果一个组件 ( 类 ) 需要感知 Activity ( 或 Fragment ) 的生命周期，以前的写法是在 Activity 的各个生命周期方法内去调用这个组件的方法，如果一个 Activity 引用了很多组件，并且这些组件都需要感知其生命周期，那么 Activity 的代码会越来越多不易维护。这时候需要 LifeCycle，使用观察者模式，Activity 为被观察者 ( LifecycleOwner )，各组件为观察者( LifecycleObserver ) 来感知 Activity 的生命周期，当 Activity 生命周期发生变化时，各组件就可以在自己内部收到通知去执行自己的逻辑，将代码从 Activity 中挪到组件自己内部，使 Activity 更简洁。</p>
+<h3 id="导入">导入</h3>
+<p>导入的方式很简单，这里直接使用最新的 androix.* 包</p>
+<pre><code class="language-groovy">implementation 'androidx.appcompat:appcompat:1.0.2'
+</code></pre>
+<h3 id="使用">使用</h3>
+<p>假如有一个这样的场景，我们有一个 LocationClient 类 ( 或者称之为组件 ) ，它可以获取到最新的位置信息，一般的需要在 Activity 的 <code>onCreate()</code> 方法中去初始化它，然后在 <code>onResume()</code> 中启动定位服务，在 <code>onPause()</code> 中停止定位服务，最后当 Activity 销毁时需要在 <code>onDestroy()</code> 方法中去停止定位以及释放一些资源。</p>
+<p>那么以前的写法可能是以下这样的：</p>
+<pre><code class="language-java">public class LocationClient {
+
+    /**
+     * 初始化
+     */
+    public void init() {
+        // ...
+    }
+
+    /**
+     * 启动定位服务
+     */
+    public void startLocateService() {
+        // ...
+    }
+
+    /**
+     * 停止定位服务
+     */
+    public void stopLocateService() {
+        // ...
+    }
+
+    /**
+     * 销毁并释放资源
+     */
+    public void destroy() {
+        // ...
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">public class LocateActivity extends AppCompatActivity {
+
+    private LocationClient mLocationClient;
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        mLocationClient = new LocationClient();
+        mLocationClient.init();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mLocationClient.startLocateService();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mLocationClient.stopLocateService();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mLocationClient.destroy();
+    }
+
+}
+</code></pre>
+<p>以上的写法看着是没什么问题，但是如果一个 Acitivty 中使用到的组件很多，例如地图组件等，那么 Activity 的生命周期方法内会充满这样的代码，显得臃肿，不易维护。</p>
+<p>接下来看下使用 Lifecycle 的写法：</p>
+<pre><code class="language-java">public class LocationClient implements LifecycleObserver {
+
+    private LifecycleOwner mLifecycleOwner;
+
+    public LocationClient(LifecycleOwner lifecycleOwner) {
+        mLifecycleOwner = lifecycleOwner;
+        mLifecycleOwner.getLifecycle().addObserver(this);
+    }
+
+    /**
+     * 初始化
+     */
+    @OnLifecycleEvent(Lifecycle.Event.ON_CREATE)
+    public void init() {
+        // ...
+    }
+
+    /**
+     * 启动定位服务
+     */
+    @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
+    public void startLocateService() {
+        // ...
+    }
+
+    /**
+     * 停止定位服务
+     */
+    @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+    public void stopLocateService() {
+        // ...
+    }
+
+    /**
+     * 销毁并释放资源
+     */
+    @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+    public void destroy() {
+        // ...
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">public class LocateActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        new LocationClient(this);
+    }
+
+}
+</code></pre>
+<p>可以发现，使用 Lifecycle 的写法和以前相比，Activity 代码变得更加简洁，分析代码之前先解释一下 2 个类：</p>
+<ul>
+<li><strong>LifecycleOwner</strong> : 被观察的对象</li>
+<li><strong>LifecycleObserver</strong> : 观察者，当 LifecycleOwner 的生命周期发生变更的时候，会通知给它</li>
+</ul>
+<p>所以从代码中可以看成，LifecycleOwner 被观察的对象就是这里的 Activity，这里我们的 Activity 最终继承自 ComponentActivity，ComponentActivity 实现了 LifecycleOwner 接口：</p>
+<pre><code class="language-java">public class ComponentActivity extends Activity
+  implements LifecycleOwner, KeyEventDispatcher.Component {
+  // ...
+}
+</code></pre>
+<p>所以 Activity 是一个被观察者，然后我们手动让 LocateClient 实现了LifecycleObserver，将其作为一个观察者，然后通过 <code>mLifecycleOwner.getLifecycle().addObserver(this);</code> 将 LocateClient 作为 LocateActivity 的观察者，最后在 LocateClient 中原本需要在 Activity 生命周期中调用的方法上面都加上了与之对应的 <code>@OnLifecycleEvent()</code> 生命周期注解，这样当 Activity 的生命周期发生变更的时候，会自动调用到 LocateClient 对应的方法，非常简便，Activity 更加轻量。</p>
+<h3 id="总结">总结</h3>
+<p>使用 Lifecycle 的写法其实就是将 Activity 中的代码转移到了组件自己内部中，以前是 Activity 生命周期发生变更时需要 Activity 自己一个一个的去通知组件，现在是 Activity 不用去主动通知组件，如果一个组件想要感知 Activity 的生命周期，组件自己注册进来监听。重心由 Activity 转移到了组件中去，让 Activity 不需要关心组件的逻辑，最后 Lifecycle 配合 MVP 食用更加。</p>
+<h3 id="参考">参考</h3>
+<p><a href="https://developer.android.com/topic/libraries/architecture/lifecycle">Handling Lifecycles with Lifecycle-Aware Components</a></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Android 事件分发机制]]></title>
+        <id>https://imhanjie.github.io//post/android_touch_event_dispatch</id>
+        <link href="https://imhanjie.github.io//post/android_touch_event_dispatch">
+        </link>
+        <updated>2018-11-11T17:15:32.000Z</updated>
+        <summary type="html"><![CDATA[<p>之前一直对Android的事件分发机制似懂非懂，所以拿起「Android开发艺术探索」决定这两天好好学习这方面的知识顺便总结下，以便后面的复习。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>之前一直对Android的事件分发机制似懂非懂，所以拿起「Android开发艺术探索」决定这两天好好学习这方面的知识顺便总结下，以便后面的复习。</p>
+<!--more-->
+<blockquote>
+<p>在看源码之前，我首先看的是这篇文章<a href="http://www.jianshu.com/p/2be492c1df96">「可能是讲解Android事件分发最好的文章」</a>，讲得很好，虽然文章内没有源码，当时看完后对看源码的理解有很大的好处。<br>
+.<br>
+这边文章主要讲到了一个很重要的点：若将布局看成一个树形结构，先是</p>
+<ul>
+<li><code>onInterceptTouchEvent()</code> 方法经历了从顶层向下</li>
+<li><code>onTouchEvent()</code> 方法经历了从底层向上(若所有的View都不拦截不消耗的情况下)</li>
+<li>若其中一个 ViewGroup 的 <code>onInterceptTouchEvent</code>  return true 拦截，直接跳转到此 ViewGroup 的父类 View 的 <code>dispatchOnTouchEvent</code> 方法中，表示 ViewGroup 自己处理事件。</li>
+</ul>
+<p>这些都会在下面的源码分析中能得到验证</p>
+</blockquote>
+<h4 id="点击事件的分发过程由三个很重要的方法完成">点击事件的分发过程由三个很重要的方法完成：</h4>
+<ul>
+<li>
+<p><code>public boolean dispatchTouchEvent(MotionEvent ev) {}</code><br>
+如果事件能够传递给当前 View，那么此方法一定会被调用，返回结果受当前 View 的 onTouchEvent 和下级 View 的 dispatchTouchEvent 方法的影响。</p>
+</li>
+<li>
+<p><code>public boolean onInterceptTouchEvent(MotionEvent ev) {}</code><br>
+在上面的 dispatchTouchEvent 方法内调用，此方法只有 ViewGroup 有，View 没有，用来判断是否拦截某个事件，如果当前 View 拦截了某个事件，那么在同一个事件序列中，此方法不会被再次调用 ( 后面的源码中可以很清楚的验证 )，返回结果表示是否拦截当前事件。</p>
+</li>
+<li>
+<p><code>public boolean onTouchEvent(MotionEvent event) {}</code><br>
+也是在 dispatchTouchEvent 方法内调用，用来处理点击事件，返回结果表示是否消耗当前事件，如果不消耗(return false)，则在同一事件序列中，当前 View 无法再次接收到事件。</p>
+</li>
+</ul>
+<h5 id="下面是三者关系的伪代码">下面是三者关系的伪代码：</h5>
+<pre><code class="language-java">public boolean dispatchTouchEvent(MotionEvent ev){
+	boolean consume = false;
+	if(onInterceptTouchEvent(ev)){
+		consume = onTouchEvent(ev);
+	}else{
+		consume = child.dispatchTouchEvent(ev);
+	}
+	return consume;
+}
+</code></pre>
+<h5 id="当一个点击事件产生后它的传递过程遵循如下顺序activity-window-view">当一个点击事件产生后，它的传递过程遵循如下顺序：Activity -&gt; Window -&gt; View</h5>
+<h2 id="activity-window">Activity -&gt; Window</h2>
+<p>源码: Activity#dispatchTouchEvent()</p>
+<pre><code class="language-java">public boolean dispatchTouchEvent(MotionEvent ev) {
+    if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+        onUserInteraction();
+    }
+    if (getWindow().superDispatchTouchEvent(ev)) {
+        return true;
+    }
+    return onTouchEvent(ev);
+}
+</code></pre>
+<h2 id="window-view">Window -&gt; View</h2>
+<p>源码: PhoneWindow#superDispatchTouchEvent()</p>
+<pre><code class="language-java">public boolean superDispatchTouchEvent(MotionEvent ev){
+	return mDecor.superDispatchTouchEvent(ev);
+}
+</code></pre>
+<p>这里直接将事件传给了 DecorView，而 DecorView 是我们 setContentView 的父布局，肯定会传递到我们的顶级View 的。</p>
+<h2 id="顶级view对点击事件的分发过程">顶级View对点击事件的分发过程</h2>
+<pre><code class="language-java">
+###PART ONE 源码: ViewGroup的dispatchTouchEvent()方法的部分代码片段###
+
+... 
+
+// Check for interception.
+final boolean intercepted;
+if (actionMasked == MotionEvent.ACTION_DOWN
+        || mFirstTouchTarget != null) {
+    final boolean disallowIntercept = (mGroupFlags &amp; FLAG_DISALLOW_INTERCEPT) != 0;
+    if (!disallowIntercept) {
+        intercepted = onInterceptTouchEvent(ev);
+        ev.setAction(action); // restore action in case it was changed
+    } else {
+        intercepted = false;
+    }
+} else {
+    // There are no touch targets and this action is not an initial down
+    // so this view group continues to intercept touches.
+    intercepted = true;
+}
+
+...
+
+
+</code></pre>
+<ul>
+<li>mFirstTouchTarget 的赋值情况：若 ViewGroup 的子元素成功处理时，mFirstTouchTarget 会被赋值并指向子元素(后面会验证)，一旦事件由当前 ViewGroup 处理时，mFirstTouchTarget 为 null，所以后续的MOVE,UP 事件到来时，由于 <code>actionMasked == MotionEvent.ACTION_DOWN||mFirstTouchTarget != null</code> 都不成立，所以 intercepted = true; 所以 onInterceptTouchEvent 将不会再调用到，验证了上面提到的结论。</li>
+<li>还有种特殊情况 <code>FLAG_DISALLOW_INTERCEPT</code> 这个标记位，这个标记位可以通过<code>requestDisallowInterceptTouchEvent()</code> 这个方法设置，一般子元素调用这个方法后，disallowIntercept为true了，所以父View的 <code>onInterceptTouchEvent()</code> 也执行不到了，所以父 View 就不能拦截事件了,<strong>但是ACTION_DOWN 事件除外</strong>，父 View 还是会执行到 <code>onInterceptTouchEvent()</code>来决定是否拦截的，因为看下面的源码片段,源码中就位于 PART ONE 的上面</li>
+</ul>
+<pre><code class="language-java">###PART TWO 源码: ViewGroup的dispatchTouchEvent()方法的部分代码片段###
+
+...
+
+// Handle an initial down.  处理最初的DOWN事件
+if (actionMasked == MotionEvent.ACTION_DOWN) {
+    // Throw away all previous state when starting a new touch gesture.
+    // The framework may have dropped the up or cancel event for the previous gesture
+    // due to an app switch, ANR, or some other state change.
+    cancelAndClearTouchTargets(ev);
+    resetTouchState();
+}
+
+后面紧接PART ONE片段
+
+
+</code></pre>
+<ul>
+<li>在<code>resetTouchState()</code>的方法内对<code>FLAG_DISALLOW_INTERCEPT</code>的标记位进行了重置，所以<code>DOWN</code>事件到来时<code>FLAG_DISALLOW_INTERCEPT</code>的标记位进行了重置，所以验证了上面提到的点：<code>requestDisallowInterceptTouchEvent()</code>方法并不能影响到ViewGroup对<code>ACTION_DOWN</code>事件的处理</li>
+</ul>
+<h5 id="到这里intercepted值有两种结果要么为false要么为true">到这里，intercepted值有两种结果，要么为false，要么为true。</h5>
+<h2 id="intercepted-为-true的情况">intercepted 为 true的情况</h2>
+<p>所以，先来看为true的这种情况的源码，<strong>这部分源码应该是表示ViewGroup自己处理</strong></p>
+<p>在源码中若intercepted为tru，则mFirstTouchTarget为null(前面提过了)直接执行到这里：</p>
+<pre><code class="language-java">###PART THREE 源码: ViewGroup的dispatchTouchEvent()方法的部分代码片段###
+
+// Dispatch to touch targets.
+if (mFirstTouchTarget == null) {
+    // No touch targets so treat this as an ordinary view.
+    handled = dispatchTransformedTouchEvent(ev, canceled, null,
+            TouchTarget.ALL_POINTER_IDS);
+} else {
+	...
+}
+
+</code></pre>
+<p>跟进dispatchTransformedTouchEvent()方法代码片段</p>
+<pre><code class="language-java">...
+
+if (child == null) {
+    handled = super.dispatchTouchEvent(event);
+} else {
+    handled = child.dispatchTouchEvent(event);
+}
+
+...
+</code></pre>
+<p><code>dispatchTransformedTouchEvent()</code>第三个参数是child参数，这里上面传了null，所以执行<code>handled = super.dispatchTouchEvent(event)</code>,因为ViewGroup继承自View，所以ViewGroup要想自己处理事件，肯定要调用自己的onTouch、onTouchEvent、onClick方法，所以要想ViewGroup处理自己，就调用父类View的<code>dispatchTouchEvent()</code>方法，把自己当做一个View来处理这些事件，所以这里调用了<code>super.dispatchTouchEvent(event)</code>，至于View的<code>dispatchTouchEvent()</code>事件怎么处理的，后面会分析到。</p>
+<p>再看刚才的另一种结果，intercepted为false，这种结果的代码片段在PART THREE的上面，因为刚才intercepted为true，所以跳过了下面的代码，来看下面的代码片段,下面的代码的执行条件是**<font color=red>DOWN事件</font>并且 intercepted为false，意味着ViewGroup不拦截事件，应向子元素分发事件**</p>
+<pre><code class="language-java">###PART FOUR 源码: ViewGroup的dispatchTouchEvent()方法的部分代码片段###
+
+final View[] children = mChildren;
+for (int i = childrenCount - 1; i &gt;= 0; i--) {
+    final int childIndex = customOrder
+            ? getChildDrawingOrder(childrenCount, i) : i;
+    final View child = (preorderedList == null)
+            ? children[childIndex] : preorderedList.get(childIndex);
+
+    // If there is a view that has accessibility focus we want it
+    // to get the event first and if not handled we will perform a
+    // normal dispatch. We may do a double iteration but this is
+    // safer given the timeframe.
+    if (childWithAccessibilityFocus != null) {
+        if (childWithAccessibilityFocus != child) {
+            continue;
+        }
+        childWithAccessibilityFocus = null;
+        i = childrenCount - 1;
+    }
+
+    if (!canViewReceivePointerEvents(child)
+            || !isTransformedTouchPointInView(x, y, child, null)) {
+        ev.setTargetAccessibilityFocus(false);
+        continue;
+    }
+
+    newTouchTarget = getTouchTarget(child);
+    if (newTouchTarget != null) {
+        // Child is already receiving touch within its bounds.
+        // Give it the new pointer in addition to the ones it is handling.
+        newTouchTarget.pointerIdBits |= idBitsToAssign;
+        break;
+    }
+	
+    resetCancelNextUpFlag(child);
+    if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
+        // Child wants to receive touch within its bounds.
+        mLastTouchDownTime = ev.getDownTime();
+        if (preorderedList != null) {
+            // childIndex points into presorted list, find original index
+            for (int j = 0; j &lt; childrenCount; j++) {
+                if (children[childIndex] == mChildren[j]) {
+                    mLastTouchDownIndex = j;
+                    break;
+                }
+            }
+        } else {
+            mLastTouchDownIndex = childIndex;
+        }
+        mLastTouchDownX = ev.getX();
+        mLastTouchDownY = ev.getY();
+        newTouchTarget = addTouchTarget(child, idBitsToAssign);
+        alreadyDispatchedToNewTouchTarget = true;
+        break;
+    }
+
+    // The accessibility focus didn't handle the event, so clear
+    // the flag and do a normal dispatch to all children.
+    ev.setTargetAccessibilityFocus(false);
+}
+
+</code></pre>
+<p>代码比较长，不过不是很难理解，大致逻辑是这样的：<br>
+遍历ViewGroup的所有元素，如果触摸的事件落在遍历到的view(你都没touch到的view，还传递分发给他事件干嘛，对吧？)，并且当前遍历到的元素正在播放动画(有点奇怪，不过不影响)，满足这两个条件，这个元素才能接收到父元素传递给他的事件。若两个条件有一个不满足就continue，继续遍历。假如遍历到了能够接收到事件的子元素时，便会执行到上面代码PART FOUR的这里：</p>
+<pre><code class="language-java">if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
+	...
+}
+</code></pre>
+<p>这个方法刚才也看到过了：</p>
+<pre><code class="language-java">...
+
+if (child == null) {
+    handled = super.dispatchTouchEvent(event);
+} else {
+    handled = child.dispatchTouchEvent(event);
+}
+
+...
+</code></pre>
+<p>这里注意了，刚才ViewGroup自己处理的时候，第三个参数child传的是null，不过，这里是ViewGroup不处理，传递给子View，所以第三个参数child传递的是刚才遍历到的将要接收到传递的事件的子元素，所以执行了这句<code>handled = child.dispatchTouchEvent(event);</code>，很明显，执行了子元素的<code>dispatchTouchEvent()</code>，子元素可能是View也可能是ViewGroup，如果是ViewGroup的话，就跟上面分析父元素的处理过程一样，可能这样层层传递下去....，如果子View是View，那就更简单了，因为View的<code>dispatchTouchEvent()</code>方法内<code>没有onInterceptTouchEvent</code>方法，所以<code>dispatchTouchEvent()</code>方法处理要简单的多。</p>
+<p>最后，if判断的<code>dispatchTransformedTouchEvent()</code>，会有一个返回值，看源码发现，那个<code>dispatchTransformedTouchEvent()</code>的返回值就是那个handled，即<code>child.dispatchTouchEvent(event)</code>的返回值，如果返回了true，表示子元素来处理这个事件了，就会执行到了if判断里面的这一句:<code>newTouchTarget = addTouchTarget(child, idBitsToAssign);</code>，在<code>addTouchTarget()</code>中完成了对<code>mFirstTouchTarget</code>的赋值(验证前面反复提到的结论)，然后最后一句<code>break;</code>，打断for循环，因为已经有子元素处理了，所以不需要遍历了。如果<code>child.dispatchTouchEvent(event)</code>的返回值返回了false，表示这个子元素也不处理，所以mFirstTouchTarget无法赋值，即为null(验证前面反复提到的结论)，接着继续for循环去遍历下一个子元素....</p>
+<p>刚才提到，如果遍历到的子元素是一个View，因为View的<code>dispatchTouchEvent()</code>内没有<code>onInterceptTouchEvent</code>方法，所以<code>dispatchTouchEvent()</code>方法处理要简单的多，下面立马分析View对点击事件的处理过程。</p>
+<h2 id="view对点击事件的处理过程">View对点击事件的处理过程</h2>
+<ul>
+<li>下面是<strong>View的dispatchTouchEvent()方法</strong>部分代码</li>
+</ul>
+<pre><code class="language-java">    public boolean dispatchTouchEvent(MotionEvent event) {
+
+		...		
+
+        boolean result = false;
+
+		...
+
+        if (onFilterTouchEventForSecurity(event)) {
+            //noinspection SimplifiableIfStatement
+            ListenerInfo li = mListenerInfo;
+            if (li != null &amp;&amp; li.mOnTouchListener != null
+                    &amp;&amp; (mViewFlags &amp; ENABLED_MASK) == ENABLED
+                    &amp;&amp; li.mOnTouchListener.onTouch(this, event)) {
+                result = true;
+            }
+
+            if (!result &amp;&amp; onTouchEvent(event)) {
+                result = true;
+            }
+        }
+
+		...
+
+        return result;
+    }
+</code></pre>
+<p>如果有设置过onTouchListener，那么<code>mOnTouchListener.onTouch</code>将会执行，<strong>如果onTouch返回true</strong>，则resulr为true，所以下面的那个if判断内的**<code>onTouchEvent(event)</code>不会执行到**。相反，<strong>若onTouch返回false，<code>onTouchEvent(event)</code>会执行得到</strong>，所以onTouch的优先级高于onTouchEvent，这样做的好处是<strong>方便在外界处理点击事件</strong>。</p>
+<ul>
+<li>接着分析onTouchEvent()方法内的代码</li>
+</ul>
+<pre><code class="language-java">
+if ((viewFlags &amp; ENABLED_MASK) == DISABLED) {
+    if (action == MotionEvent.ACTION_UP &amp;&amp; (mPrivateFlags &amp; PFLAG_PRESSED) != 0) {
+        setPressed(false);
+    }
+    // A disabled view that is clickable still consumes the touch
+    // events, it just doesn't respond to them.
+    return (((viewFlags &amp; CLICKABLE) == CLICKABLE
+            || (viewFlags &amp; LONG_CLICKABLE) == LONG_CLICKABLE)
+            || (viewFlags &amp; CONTEXT_CLICKABLE) == CONTEXT_CLICKABLE);
+}
+
+</code></pre>
+<p>先看当View处于不可用的状态下点击事件的处理过程，很显然，不可用状态下的View照样会消耗点击事件，尽管它看起来不可用。</p>
+<p>继续看:</p>
+<pre><code class="language-java">if (((viewFlags &amp; CLICKABLE) == CLICKABLE ||
+        (viewFlags &amp; LONG_CLICKABLE) == LONG_CLICKABLE) ||
+        (viewFlags &amp; CONTEXT_CLICKABLE) == CONTEXT_CLICKABLE) {
+    switch (action) {
+        case MotionEvent.ACTION_UP:
+            boolean prepressed = (mPrivateFlags &amp; PFLAG_PREPRESSED) != 0;
+            if ((mPrivateFlags &amp; PFLAG_PRESSED) != 0 || prepressed) {
+				
+				...
+				
+                if (!mHasPerformedLongPress &amp;&amp; !mIgnoreNextUpEvent) {
+                    // This is a tap, so remove the longpress check
+                    removeLongPressCallback();
+
+                    // Only perform take click actions if we were in the pressed state
+                    if (!focusTaken) {
+                        // Use a Runnable and post this rather than calling
+                        // performClick directly. This lets other visual state
+                        // of the view update before click actions start.
+                        if (mPerformClick == null) {
+                            mPerformClick = new PerformClick();
+                        }
+                        if (!post(mPerformClick)) {
+                            performClick();
+                        }
+                    }
+                }
+
+				...
+
+            }
+
+			...
+
+            break;
+    }
+
+    return true;
+}
+</code></pre>
+<p>从上面的代码来看，只要View的<code>CLICKABLE</code>和<code>LONG CLICKABLE</code>有一个为true，那么他就会消耗这个事件，因为return了true，不管他是不是DISABLE状态。然后当<code>ACTION_UP</code>触发时，会执行<code>performClick()</code>，在<code>performClick()</code>的内部，如果有设置onClickListener，那么<code>performClick()</code>方法内部会调用他的onClick方法，如下所示：</p>
+<pre><code class="language-java">public boolean performClick() {
+    final boolean result;
+    final ListenerInfo li = mListenerInfo;
+    if (li != null &amp;&amp; li.mOnClickListener != null) {
+        playSoundEffect(SoundEffectConstants.CLICK);
+        li.mOnClickListener.onClick(this);
+        result = true;
+    } else {
+        result = false;
+    }
+
+    sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED);
+    return result;
+}
+</code></pre>
+<p>View的<code>LONG_CLICKABLE</code>默认是false，而<code>CLICKABLE</code>属性则要看具体的View了，例如，Button的<code>CLICKABLE</code>默认为true，TextView的<code>CLICKABLE</code>默认为false，只要执行了<code>setOnClickListener()</code>或者<code>setOnLongClickListener()</code>都会将<code>CLICKABLE</code>或者<code>LONG_CLICKABLE</code>置为true，看源码就知道了：</p>
+<pre><code class="language-java">public void setOnClickListener(@Nullable OnClickListener l) {
+    if (!isClickable()) {
+        setClickable(true);
+    }
+    getListenerInfo().mOnClickListener = l;
+}
+</code></pre>
+<pre><code class="language-java">public void setOnLongClickListener(@Nullable OnLongClickListener l) {
+    if (!isLongClickable()) {
+        setLongClickable(true);
+    }
+    getListenerInfo().mOnLongClickListener = l;
+}
+</code></pre>
+<hr>
+<h5 id="下结论都是书上总结的">下结论都是书上总结的：</h5>
+<ol>
+<li>同一事件序列是指从手指接触屏幕的那一刻起，到手指离开屏幕的那一刻结束，在这个过程中所产生的一系列事件，这个事件序列以down事件开始，中间含有数量不定的move事件，最终以up事件结束。</li>
+<li>正常情况下，一个事件序列只能被一个View拦截且消耗。这一条原因可以参考(3)，因为一旦一个元素拦截了某此事件，那么同一事件序列内的所有事件都会直接交给它处理，因此同一事件序列中的事件不能分别由两个View同时处理，但是通过特殊手段可以做到，比如一个View将本该自己处理的事件通过<code>onTouchEvent</code>强行传递给其他View处理</li>
+<li>某个View一旦决定拦截，那么这一个事件序列都只能由它处理（如果事件能够传递给他的话），并且它的<code>onInterceptTouchEvent</code>不会再被调用。这条也很好理解，就是说当一个View决定拦截一个事件后，那么系统会把同一事件序列内的其他方法都直接交给他来处理，因此不会再调用这个View的<code>onInterceptTouchEvent</code>去询问它是否要拦截了</li>
+<li>某个View一旦开始处理事件，<strong>如果它不消耗<code>ACTION_DOWN</code>事件(<code>onTouchEvent</code>返回了false)，那么同一事件序列中的其他事件都不会再交给他来处理</strong>，并且事件将重新交给它的父元素处理，即父元素的<code>onTouchEvent</code>会被调用。意思是事件一旦交给一个View处理，那么它就必须消耗掉，否则同一事件序列中剩下的事件就不再交给他来处理了。</li>
+<li>如果View不消耗除<code>ACTION_DOWN</code>以外的其他事件，那么这个点击事件会消失，此时父元素的<code>onTouchEvent</code>并不会被调用，并且当前View可以持续收到后续的点击事件，最终这些消失的点击事件会传递给Activity处理</li>
+<li>ViewGroup默认不拦截任何点击事件。Android源码中ViewGroup的<code>onInterceptTouchEven</code>t方法默认返回false</li>
+<li>View没有<code>onInterceptTouchEvent</code>方法，一旦有点击事件传递给他，那么它的<code>onTouchEvent</code>方法就会被调用</li>
+<li>View的<code>onTouchEvent</code>默认都会消耗事件(返回true)，除非它是不可点击的(clickable和longClickable同时为false)。View的longClickable属性默认都为false，clickable属性要分情况，不必多说</li>
+<li>View的enable属性不影响onTouchEvent的默认返回值。哪怕一个View是disable状态的，只要它的clickable或者longClickable有一个为true，那么它的<code>onTouchEvent</code>就返回true</li>
+<li>onClick会发生的前提是当前View可点击的，并且他收到了down和up事件</li>
+<li>事件传递过程是由外向内的，即事件总是先传递给父元素，然后再有父元素分发给子View，通过<code>requestDisallowInterceptTouchEvent</code>方法可以在子元素中干预父元素的事件分发过程，当然<code>ACTION_DOWN</code>不能干预</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Android RemoteViews]]></title>
+        <id>https://imhanjie.github.io//post/android_remoteviews</id>
+        <link href="https://imhanjie.github.io//post/android_remoteviews">
+        </link>
+        <updated>2018-10-24T14:42:44.000Z</updated>
+        <summary type="html"><![CDATA[<p>RemoteVies在自定义通知栏布局和桌面Widget的开发中扮演着重要的角色。</p>
+]]></summary>
+        <content type="html"><![CDATA[<p>RemoteVies在自定义通知栏布局和桌面Widget的开发中扮演着重要的角色。</p>
+<!--more-->
+<p>RemoteViews 顾名思义，远程 View，RemoteViews 表示的是一个 View 结构，他可以在其他进程中显示，由于他在其他进程中显示，为了能够更新它的界面。RemoteViews 提供了一组基础的操作用于跨进程更新它的界面。自定义通知栏布局和桌面Widget更新界面时无法像 Activity 里面那样去直接更新 View，这是因为他们的界面运行在其他进程中，确切来说是系统的 SystemServer 进程。为了提供更新界面，RemoteViews 提供了一系列的 set 方法。</p>
+<p>最常用的构造方法：</p>
+<pre><code class="language-java">public RemoteViews(String packageName , int layoutId)
+</code></pre>
+<p>第一个参数是包名，第二个参数是布局文件的资源id;</p>
+<p><strong>注意：RemoteView 并不支持所有的 View，只支持部分 View ( 因为更新 UI 是通过多进程的，所以出于性能考虑)</strong></p>
+<ul>
+<li>下面列举了一些常用的 set 方法：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>方法名</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>setTextViewText(int viewId, CharSequence text)</td>
+<td>设置 TextView 的文本</td>
+</tr>
+<tr>
+<td>setTextViewTextSize(int viewId, int units, float size)</td>
+<td>设置 TextView 的字体大小</td>
+</tr>
+<tr>
+<td>setTextColor(int viewId, int color)</td>
+<td>设置 TextView 的字体颜色</td>
+</tr>
+<tr>
+<td>setImageViewResource(int viewId, int srcId)</td>
+<td>设置 ImageView 的图片资源</td>
+</tr>
+<tr>
+<td>setInt(int viewId, String methodName, int value)</td>
+<td>反射调用 View 对象的参数类型为 int 的方法</td>
+</tr>
+<tr>
+<td>setLong(int viewId, String methodName, long value)</td>
+<td>反射调用 View 对象的参数类型为 long 的方法</td>
+</tr>
+<tr>
+<td>setBoolean(int viewId, String methodName, boolean value)</td>
+<td>反射调用 View 对象的参数类型为 boolean 的方法</td>
+</tr>
+<tr>
+<td>setOnClickPendingIntent(int viewId, PendingIntent pendingIntent)</td>
+<td>为 View 添加单击事件，事件类型只能为PendingIntent</td>
+</tr>
+</tbody>
+</table>
+<h3 id="remoteview-的内部机制">RemoteView 的内部机制</h3>
+<ul>
+<li>首先 RemoteViews 会通过 **Binder **传递到 SystemSever 进程，这是因为 RemoteViews 实现了 Parcelable 接口，因此可以跨进程传输</li>
+<li>系统会根据 RemoteViews 中的包名等信息去得到该应用的资源。</li>
+<li>通过 LayoutInflater 去加载 RemoteViews 中的布局文件。</li>
+<li>接着系统会对 View 执行一系列界面更新任务，这些任务就是之前我们通过 set 方法来<strong>提交</strong>的。set 方法对View 的操作不是立刻执行的，在 RemoteViews 内部会记录所有的更新操作，等到 RemoteViews 被加载以后才能执行。</li>
+</ul>
+<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/YNbpXgK.png" alt=""></figure>
+<p>理论上，系统完全可以通过 Binder 去支持所有的 View 和 View 操作，但这样做代价太大，因为 View 的方法太多了，另外就是大量的 IPC 操作会影响效率。为了解决这个问题，<strong>系统并没有通过 Binder 去直接支持 View 的跨进程访问，而是提供了一个 Action 的概念，Action 代表一个 View 的操作，Action 同样实现了 Parcelable 接口。系统首先将 View 操作封装到 Action 对象并将这些对象跨进程传输到远程进程，接着远程进程中执行 Action 对象中的具体操作。</strong></p>
+<p>例如看 setTextViewText 方法的实现：</p>
+<pre><code class="language-java">public void setTextViewText(int viewId, CharSequence text) {
+    setCharSequence(viewId, &quot;setText&quot;, text);
+}
+</code></pre>
+<pre><code class="language-java">public void setCharSequence(int viewId, String methodName, CharSequence value) {
+    addAction(new ReflectionAction(viewId, methodName, ReflectionAction.CHAR_SEQUENCE, value));
+}
+</code></pre>
+<pre><code class="language-java">private void addAction(Action a) {
+
+	...   
+
+    if (mActions == null) {
+        mActions = new ArrayList&lt;Action&gt;();
+    }
+    mActions.add(a);
+
+    ...
+}
+</code></pre>
+<p>可以看到 RemoteViews 内部有个 mActions 成员，用于存储每次 set 的 Action 的操作。</p>
+<pre><code class="language-java">public View apply(Context context, ViewGroup parent, OnClickHandler handler) {
+    RemoteViews rvToApply = getRemoteViewsToApply(context);
+
+    View result;
+    
+	...
+
+    LayoutInflater inflater = (LayoutInflater)
+            context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+    // Clone inflater so we load resources from correct context and
+    // we don't add a filter to the static version returned by getSystemService.
+    inflater = inflater.cloneInContext(inflationContext);
+    inflater.setFilter(this);
+    result = inflater.inflate(rvToApply.getLayoutId(), parent, false);
+
+    rvToApply.performApply(result, parent, handler);
+
+    return result;
+}
+</code></pre>
+<pre><code class="language-java">private void performApply(View v, ViewGroup parent, OnClickHandler handler) {
+    if (mActions != null) {
+        handler = handler == null ? DEFAULT_ON_CLICK_HANDLER : handler;
+        final int count = mActions.size();
+        for (int i = 0; i &lt; count; i++) {
+            Action a = mActions.get(i);
+            a.apply(v, parent, handler);
+        }
+    }
+}
+</code></pre>
+<p>RemoteViews 的 apply 方法是来进行 View 的更新操作的。可以看到，RemoteViews 的 apply 方法内部会遍历调用所有 Action 对象的 apply 方法，具体的 View 更新操作是由 Action 对象的 apply 方法来完成的。<br>
+至于 apply 是怎么被调用的，例如当我们在小部件开发中调用 AppWidgetManager 或者通知栏的NotificationManager 的 notify 方法，他们的确是通过 RemoteViews 的 apply 以及 reapply 方法来加载或者更新界面的。</p>
+<p>apply 和 reapply 的区别在于：</p>
+<ul>
+<li>apply 会加载布局并更新界面。</li>
+<li>reApply 则只会更新界面。</li>
+</ul>
+<p>通知栏和桌面小插件在初始化界面时会调用 apply 方法，而在后续的更新界面时则会调用 reapply 方法。</p>
+<p>下面看一些 Action 的子类的具体实现：</p>
+<ul>
+<li>ReflectionAction</li>
+</ul>
+<pre><code class="language-java">private final class ReflectionAction extends Action {
+
+	...
+
+    ReflectionAction(int viewId, String methodName, int type, Object value) {
+        this.viewId = viewId;
+        this.methodName = methodName;
+        this.type = type;
+        this.value = value;
+    }
+
+	...
+
+    @Override
+    public void apply(View root, ViewGroup rootParent, OnClickHandler handler) {
+        final View view = root.findViewById(viewId);
+        if (view == null) return;
+
+        Class&lt;?&gt; param = getParameterType();
+        if (param == null) {
+            throw new ActionException(&quot;bad type: &quot; + this.type);
+        }
+
+        try {
+            getMethod(view, this.methodName, param).invoke(view, wrapArg(this.value));
+        } catch (ActionException e) {
+            throw e;
+        } catch (Exception ex) {
+            throw new ActionException(ex);
+        }
+    }
+	
+	...
+
+}
+</code></pre>
+<p>ReflectionAction 表示的是一个反射动作。使用 ReflectionAction 的 set 方法有：setTextViewText、setBoolean、setLong、setDouble等等。</p>
+<p>除了 ReflectionAction 还有其他的 Action，下面来看看 TextViewSizeAction：</p>
+<ul>
+<li>TextViewSizeAction</li>
+</ul>
+<pre><code class="language-java">private class TextViewSizeAction extends Action {
+    public TextViewSizeAction(int viewId, int units, float size) {
+        this.viewId = viewId;
+        this.units = units;
+        this.size = size;
+    }
+
+	...
+
+    @Override
+    public void apply(View root, ViewGroup rootParent, OnClickHandler handler) {
+        final TextView target = (TextView) root.findViewById(viewId);
+        if (target == null) return;
+        target.setTextSize(units, size);
+    }
+
+    public String getActionName() {
+        return &quot;TextViewSizeAction&quot;;
+    }
+
+    int units;
+    float size;
+
+    public final static int TAG = 13;
+}
+</code></pre>
+<p>TextViewSizeAction 的实现比较简单，他之所以不用反射来实现，是因为 setTextSize 这个方法有2个参数，因此无法复用 ReflectionAction，因为 ReflectionAction 反射调用只有一个参数。</p>
+<blockquote>
+<p>文章整理自「Android开发艺术探索」</p>
+</blockquote>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[MongoDB 常用命令总结]]></title>
+        <id>https://imhanjie.github.io//post/MongoDB-常用命令总结</id>
+        <link href="https://imhanjie.github.io//post/MongoDB-常用命令总结">
+        </link>
+        <updated>2018-04-26T15:55:02.000Z</updated>
+        <summary type="html"><![CDATA[<blockquote>
+<p>update : 2018-04-26</p>
+</blockquote>
+]]></summary>
+        <content type="html"><![CDATA[<blockquote>
+<p>update : 2018-04-26</p>
+</blockquote>
+<!--more-->
+<table>
+<thead>
+<tr>
+<th style="text-align:center">SQL 术语/概念</th>
+<th style="text-align:center">MongoDB 术语/概念</th>
+<th style="text-align:center">解释/说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">database</td>
+<td style="text-align:center"><strong>database</strong></td>
+<td style="text-align:center">数据库</td>
+</tr>
+<tr>
+<td style="text-align:center">table</td>
+<td style="text-align:center"><strong>collection</strong></td>
+<td style="text-align:center">数据库表/集合</td>
+</tr>
+<tr>
+<td style="text-align:center">row</td>
+<td style="text-align:center"><strong>document</strong></td>
+<td style="text-align:center">数据记录行/文档</td>
+</tr>
+<tr>
+<td style="text-align:center">column</td>
+<td style="text-align:center"><strong>field</strong></td>
+<td style="text-align:center">数据字段/域</td>
+</tr>
+<tr>
+<td style="text-align:center">index</td>
+<td style="text-align:center"><strong>index</strong></td>
+<td style="text-align:center">索引</td>
+</tr>
+<tr>
+<td style="text-align:center">table joins</td>
+<td style="text-align:center"></td>
+<td style="text-align:center">表连接，MongoDB 不支持</td>
+</tr>
+<tr>
+<td style="text-align:center">primary key</td>
+<td style="text-align:center"><strong>primary key</strong></td>
+<td style="text-align:center">主键，MongoDB 自动将 _id 字段设置为主键</td>
+</tr>
+</tbody>
+</table>
+<h2 id="常用命令">常用命令</h2>
+<blockquote>
+<p>以下命令以 <code>weather</code> 数据库为例</p>
+</blockquote>
+<h3 id="数据库">数据库</h3>
+<p><code>use weather</code> ：连接到 weather 数据库（不存在自动创建）</p>
+<p><code>show dbs</code>：显示 Mongo 所有数据库</p>
+<p><code>db.dropDatabase()</code>：删除当前 weather 数据库</p>
+<h3 id="集合表">集合（表）</h3>
+<p><code>db.createCollection(&quot;forecast&quot;)</code>：创建一个 forecast 集合</p>
+<p><code>db.forecast.drop()</code>：删除 weather 数据库中的 forecast 集合，如果成功删除选定集合，则 drop() 方法返回 true，否则返回 false</p>
+<p><code>show tables / show collections</code>：显示所有集合</p>
+<h3 id="文档记录">文档（记录）</h3>
+<p><code>db.forecast.insert({&quot;type&quot;:&quot;晴&quot;})</code>：插入文档</p>
+<blockquote>
+<p>其实 MongoDB 不需要手动创建集合，当我们插入一条文档的时候，MongoDB 会自动创建集合，例如 <code>db.forecast.insert({&quot;type&quot;:&quot;晴&quot;})</code> 即使 forecast 集合先前没有创建，执行该插入命令后，MongoDB 会自动为我们创建该集合，所以从这里我就感觉 MongoDB 很像语言中的 Python，使用起来很方便 - -</p>
+<p>所以执行该命令时一般需要配置第二个参数来个性化创建集合，<code>db.createCollection(name,options)</code> 例如指定有关内存大小及索引的选项，详情查看：</p>
+</blockquote>
+<blockquote>
+<p>插入文档你也可以使用 <code>db.forecast.save(xxx)</code> 命令。如果不指定 <code>_id</code> 字段 <code>save()</code> 方法类似于 <code>insert()</code> 方法。如果指定 <code>_id</code> 字段，则会更新该 <code>_id</code> 的数据</p>
+</blockquote>
+<p><code>db.forecast.find()</code>：列出集合中的所有文档</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[MVC 模式与 MVP 模式的一些思考]]></title>
+        <id>https://imhanjie.github.io//post/mvc-vs-mvp</id>
+        <link href="https://imhanjie.github.io//post/mvc-vs-mvp">
+        </link>
+        <updated>2017-08-06T10:24:01.000Z</updated>
+        <summary type="html"><![CDATA[<h2 id="mvc-vs-mvp">MVC vs MVP</h2>
+<p>MVP 一种由传统的 MVC 模式演变而来开发模式。MVC 和 MVP 都有一个共同的地方，就是 Model (M) 负责数据的存取，View (V) 负责界面的显示，Controller (C) 与 Presenter (P) 负责业务逻辑的处理。但是两者最大的不同点就是 View 与 Model 之间的交互方式，在 MVC 中 V，View 允许去直接访问 Model，而在 MVP 中是不可以的，View 与 Model 之间的交互完全由 Presenter 来负责。</p>
+]]></summary>
+        <content type="html"><![CDATA[<h2 id="mvc-vs-mvp">MVC vs MVP</h2>
+<p>MVP 一种由传统的 MVC 模式演变而来开发模式。MVC 和 MVP 都有一个共同的地方，就是 Model (M) 负责数据的存取，View (V) 负责界面的显示，Controller (C) 与 Presenter (P) 负责业务逻辑的处理。但是两者最大的不同点就是 View 与 Model 之间的交互方式，在 MVC 中 V，View 允许去直接访问 Model，而在 MVP 中是不可以的，View 与 Model 之间的交互完全由 Presenter 来负责。</p>
+<!--more-->
+<h2 id="android-中的-mvc">Android 中的 MVC</h2>
+<p>在 Android 中，Controller 的职责落在了 Activity 中，而 Activity 负责加载 XML 中的布局显示在界面上，对 View 中的控件的访问也在 Activity 中完成，所以 Activity 变得 “很重”，遇到复杂的界面时，代码量动辄成百上千行，隔段时间再去维护该块代码时，那种痛，可想而知~</p>
+<h2 id="mvp-在-android-中的应用">MVP 在 Android 中的应用</h2>
+<ol>
+<li>Activity V 层只负责界面的显示，业务逻辑交给 P 层处理，P 与 V 直接通过接口通信。</li>
+<li>P 层收到 V 层的交互请求，负责调用 M 层来处理数据，处理完后通知 V 层更新界面。</li>
+<li>P 层与 M 层也通过接口进行通信，P 层处于 V 与 M 之间的中介，负责调度 V 与 M。</li>
+</ol>
+<p>MVP 模式的优点：</p>
+<ul>
+<li>
+<p>实现 View 与 Model 的解耦</p>
+<p>View 与 Model 之间的通信需要通过 Presenter 来完成，修改界面不影响模型，修改模型不影响界面。</p>
+</li>
+<li>
+<p>逻辑更清晰，易于维护</p>
+<p>使用 MVP 后，View 只负责界面的显示，看起来非常干净，不至于过两天再来看就成了 “别人的代码”</p>
+</li>
+<li>
+<p>P 层与 M 层复用</p>
+<p>如果项目中有类似的界面，可以直接复用 Presenter 或者 Model 层</p>
+</li>
+<li>
+<p>适合多人协同开发</p>
+<p>如果一个页面太复杂可以实现多人共同开发，开发之前事先定义好 V 与 P、P 与 V 之间的接口（接口后期根据开发来修改），然后可以让一个人负责界面，另一个人负责业务逻辑，之间使用接口进行通信。</p>
+</li>
+<li>
+<p>单元测试</p>
+<p>可不依托于界面来单独进行业务逻辑的测试</p>
+</li>
+</ul>
+<p>MVP 模式的缺点：</p>
+<ul>
+<li>代码量变多，需要定义很多接口，类文件增多</li>
+<li>需要控制好一些特殊对象的生命周期，防止内存泄漏的问题</li>
+</ul>
+<h2 id="总结">总结</h2>
+<p>MVP 模式没有正确的写法，MVP 只是一个思想，根据需求适合自己项目才是正确的。页面逻辑越复杂，MVP 的优势越明显，所以如果遇到简单的界面，可以不使用 MVP。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Android 消息循环机制总结]]></title>
+        <id>https://imhanjie.github.io//post/android_handler_summary</id>
+        <link href="https://imhanjie.github.io//post/android_handler_summary">
+        </link>
+        <updated>2017-06-04T06:43:36.000Z</updated>
+        <summary type="html"><![CDATA[<p>要想在一个线程要想使用消息循环系统，通常需要：</p>
+<pre><code class="language-java">Looper.prepare();
+mHandler = new Handler() {...};
+Looper.loop();
+</code></pre>
+]]></summary>
+        <content type="html"><![CDATA[<p>要想在一个线程要想使用消息循环系统，通常需要：</p>
+<pre><code class="language-java">Looper.prepare();
+mHandler = new Handler() {...};
+Looper.loop();
+</code></pre>
+<!--more-->
+<p>而在 UI 线程直接创建 Handler 实例就可以直接使用（通过Handler 的无参构造函数创建的 Handler 默认与当前线程的 Looper 绑定），是因为在 ActivityThread 中的 <code>main()</code> 方法中，系统已为我们自动创建好了 Looper 并调用了 <code>loop()</code> 方法开启了循环：</p>
+<pre><code class="language-java">public static void main(String[] args) {
+    ...
+    Looper.prepareMainLooper();
+	...
+    Looper.loop();
+    throw new RuntimeException(&quot;Main thread loop unexpectedly exited&quot;);
+}
+</code></pre>
+<p><code>Looper.prepareMainLooper();</code> 实际上就是调用了 Looper 的 prepare() 方法，之所以系统弄了一个 <code>prepareMainLooper()</code>方法是因为系统在给 UI 线程创建 Looper 实例的时候顺便把这个实例赋值给了 Looper 的一个内部静态变量 sMainLooper：</p>
+<pre><code class="language-java">private static Looper sMainLooper;
+</code></pre>
+<p>并且提供了一个静态方法 <code>getMainLooper()</code> 供外部调用来获取这个 sMainLooper，方便在其他线程中可随时拿到 UI 线程的 Looper，一旦拿到 UI 线程的 Looper，我们就可以在其他线程很方便地创建一个与 UI 线程中的 Looper 相关联的 Handler 了，例如下面这样：</p>
+<pre><code class="language-Java">Handler handler = new Handler(Looper.getMainLooper){...};
+</code></pre>
+<h3 id="一-一个线程中只有一个-looper">一、一个线程中只有一个 Looper</h3>
+<pre><code class="language-java">private static void prepare(boolean quitAllowed) {
+    if (sThreadLocal.get() != null) {
+        throw new RuntimeException(&quot;Only one Looper may be created per thread&quot;);
+    }
+    sThreadLocal.set(new Looper(quitAllowed));
+}
+</code></pre>
+<h3 id="二-一个-looper-内部维护了一个-messagequeue-消息队列">二、一个 Looper 内部维护了一个 MessageQueue 消息队列</h3>
+<pre><code class="language-java">private Looper(boolean quitAllowed) {
+    mQueue = new MessageQueue(quitAllowed);
+    mThread = Thread.currentThread();
+}
+</code></pre>
+<h3 id="handler-负责发送-message-消息到与之绑定的线程中-looper-中的-messagequeue">Handler 负责发送 Message 消息到与之绑定的线程中 Looper 中的 MessageQueue</h3>
+<p>Handler 的各种 <code>sendMessage()</code> 方法最后都会辗转来到 Handler 的 <code>enqueueMessage()</code> 方法，在内部调用了与 Handler 相绑定线程的 Looper 内部的 MessageQueue 的 <code>enqueueMessage()</code> 来将消息放进消息队列中。</p>
+<pre><code class="language-java">private boolean enqueueMessage(MessageQueue queue, Message msg, long uptimeMillis) {
+    msg.target = this;
+    if (mAsynchronous) {
+        msg.setAsynchronous(true);
+    }
+    return queue.enqueueMessage(msg, uptimeMillis);
+}
+</code></pre>
+<h3 id="三-looper-的作用就是循环取出-messagequeue-中的-message-并返交给发送它的-handler-去处理">三、Looper 的作用就是循环取出 MessageQueue 中的 Message 并返交给发送它的 Handler 去处理</h3>
+<p>在 <code>Looper.loop()</code> 调用后即开启了循环系统：</p>
+<pre><code class="language-java">public static void loop() {
+	...
+    for (;;) {
+        Message msg = queue.next(); // might block
+        if (msg == null) {
+            // No message indicates that the message queue is quitting.
+            return;
+        }
+      	...
+        try {
+            msg.target.dispatchMessage(msg);
+        } finally {
+            if (traceTag != 0) {
+                Trace.traceEnd(traceTag);
+            }
+        }
+		...
+    }
+}
+</code></pre>
+<p>Looper 不断的从 MessageQueue 队列中取出消息并调用了消息的 <code>target.dispatchMessage(msg)</code> 方法，Message 的 target 一般为发送消息的 Handler (上面 Handler <code>enqueueMessage()</code>的代码块中有体现 <code>msg.target = this</code> )，Handler 的 <code>dispatchMessage()</code> 方法就是对消息的处理了，</p>
+<pre><code class="language-java">/**
+ * Handle system messages here.
+ */
+public void dispatchMessage(Message msg) {
+    if (msg.callback != null) {
+        handleCallback(msg);
+    } else {
+        if (mCallback != null) {
+            if (mCallback.handleMessage(msg)) {
+                return;
+            }
+        }
+        handleMessage(msg);
+    }
+}
+</code></pre>
+<pre><code class="language-java">private static void handleCallback(Message message) {
+    message.callback.run();
+}
+</code></pre>
+<p>可以看到，会优先把消息交给 Message 的 callback (一个 Runnable) 的 <code>run()</code> 方法处理，如果 callback 为空就会再尝试给 Handler 的 callback(mCallback) 处理，如果 Handler 的 callback 也为空，就会给 Handler 我们熟知的 <code>handleMessage()</code> 方法处理。</p>
+<h3 id="四-一个线程中可以有多个-handler但一个-handler-只能与一个-looper-绑定">四、一个线程中可以有多个 Handler，但一个 Handler 只能与一个 Looper 绑定</h3>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Clean Code - 有意义的命名]]></title>
+        <id>https://imhanjie.github.io//post/clean_code_name</id>
+        <link href="https://imhanjie.github.io//post/clean_code_name">
+        </link>
+        <updated>2017-05-08T14:45:10.000Z</updated>
+        <content type="html"><![CDATA[<h4 id="1-如果名称需要注释来补充那就不算是名副其实">1. 如果名称需要注释来补充，那就不算是名副其实。</h4>
+<h4 id="2-废话都是冗余">2. 废话都是冗余。</h4>
+<h4 id="3-variable-一词永远不应该出现在变量中">3. Variable 一词永远不应该出现在变量中。</h4>
+<h4 id="4-table-一词永远不应该出现在表名中">4. Table 一词永远不应该出现在表名中。</h4>
+<h4 id="5-如果名称读不出来讨论的时候就会像个傻鸟">5. 如果名称读不出来，讨论的时候就会像个傻鸟。</h4>
+<h4 id="6-长名称胜于短名称搜得到的名称胜于用自造名称">6. 长名称胜于短名称，搜得到的名称胜于用自造名称。</h4>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[使用 SurfaceView 实现一个下雨的天气效果]]></title>
         <id>https://imhanjie.github.io//post/use_surfaceview</id>

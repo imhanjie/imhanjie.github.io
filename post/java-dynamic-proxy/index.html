@@ -1,0 +1,391 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Java 动态代理及源码简析 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Java 动态代理及源码简析</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2019-02-23</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/java">
+                    Java
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>Android 中的 Retrofit 框架以及 Spring AOP 的内部实现都是基于 Java 动态代理机制来实现的，所以理解 Java 动态代理机制有助于我们阅读框架源码以及理解其实现思路。</p>
+<!--more-->
+<p>Java 有两种代理方式，一种是<strong>静态代理</strong>，另外一种就是本文所介绍的<strong>动态代理</strong>。</p>
+<h3 id="静态代理">静态代理</h3>
+<p>静态代理比较简单，静态代理代理的是一个类，代理类和委托类（被代理类）都实现相同的接口，然后代理类内部持有委托类的引用，客户端只需要与代理类打交道，客户端调用代理类的方法时，代理类内部再调用委托类的方法，但在调用委托类方法的前后，代理类可以插入自己的代码，执行自己的逻辑，下面是一个静态代理的简单代码演示。</p>
+<pre><code class="language-java">public interface IAnimal {
+
+    void say(String word);
+
+}
+</code></pre>
+<pre><code class="language-java">public class Cat implements IAnimal {
+
+    @Override
+    public void say(String word) {
+        System.out.println(&quot;Cat: say()--&gt;&quot; + word);
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">public class StaticAnimalProxy implements IAnimal{
+
+    private IAnimal animal;
+
+    public StaticAnimalProxy(IAnimal animal) {
+        this.animal = animal;
+    }
+
+    @Override
+    public void say(String word) {
+        System.out.println(&quot;静态代理前置代码&quot;);
+        animal.say(word);
+        System.out.println(&quot;静态代理后置代码&quot;);
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">StaticAnimalProxy proxy = new StaticAnimalProxy(new Cat());
+proxy.say(&quot;hello!&quot;);
+</code></pre>
+<pre><code>输出:
+
+静态代理前置代码
+Cat: say()--&gt;hello!
+静态代理后置代码
+</code></pre>
+<h3 id="动态代理">动态代理</h3>
+<p>上面说到静态代理代理的是一个类，动态代理代理的是一个接口，要想实现动态代理，必须要实现 <code>InvocationHandler</code> 这个接口，这个实现类可以理解为是一个调用处理器 (Handler)，通过这个 <code>InvocationHandler</code> 的实现类和 <code>Proxy</code> 类的 <code>newProxyInstance()</code> 方法可以动态生成任何接口的代理类，下面是一个实现动态代理的例子。</p>
+<pre><code class="language-java">public class DynamicProxyHandler implements InvocationHandler {
+    
+    // 被代理的对象
+    private Object target;
+
+    public DynamicProxyHandler(Object target) {
+        this.target = target;
+    }
+
+    @Override
+    public Object invoke(Object object, Method method, Object[] args) throws Throwable {
+        System.out.println(&quot;动态代理前置代码&quot;);
+        // 这里真正调用被代理对象的方法，返回结果是方法的返回值，在这行代码前后可以实现额外的逻辑，实现代理功能。
+        Object result = method.invoke(target, args);
+        System.out.println(&quot;动态代理后置代码&quot;);
+        return result;
+    }
+
+}
+</code></pre>
+<pre><code class="language-java">// 被代理的对象 cat
+Cat cat = new Cat();
+// 创建调用处理器，将 cat 作为参数传递进去，让处理器持有被代理对象 cat 的引用
+DynamicProxyHandler proxyHandler = new DynamicProxyHandler(cat);
+// 因为 Cat 实现了 IAnimal 接口，所以这里生成动态生成一个 IAnimal 的代理类
+IAnimal animal = (IAnimal) Proxy.newProxyInstance(IAnimal.class.getClassLoader(), new Class[]{IAnimal.class}, proxyHandler);
+animal.say(&quot;hello!&quot;);
+// 返回的 animal 实际上不是真正的 animal，而是 animal 的代理类 com.sun.proxy.$Proxy0
+System.out.println(animal.getClass().getCanonicalName());
+</code></pre>
+<pre><code class="language-java">动态代理前置代码
+Cat: say()--&gt;hello!
+动态代理后置代码
+com.sun.proxy.$Proxy0
+</code></pre>
+<h3 id="静态代理和动态代理的比较">静态代理和动态代理的比较</h3>
+<ul>
+<li>
+<p>静态代理代理的是一个类，动态代理的是接口。</p>
+</li>
+<li>
+<p>静态代理类在程序运行之前代理类 (.class) 就存在了，而动态代理是在程序运行时通过反射机制动态生成代理类。</p>
+<blockquote>
+<p>StaticAnimalProxy 只能代理 IAnimal 的实现类。</p>
+<p>DynamicProxyHandler 内部代理的是一个 Object，<code>Proxy.newProxyInstance</code> 方法可以为任一接口代理生成代理类，上面的例子代理的是 IAnimal 的代理类，当然也可以代理其他接口。</p>
+</blockquote>
+</li>
+<li>
+<p>相较于静态代理，动态代理的优点是实现无侵入式的代码扩展，可以在不修改源码的情况下去增强一些方法，在方法的前后做自己想做的事情，此外也还可以减少代码量，若使用静态代理，如果类的方法比较多的时候，需要手写大量的代码，而动态代理只需要在 <code>InvocationHandler</code> 的 <code>invoke()</code> 方法中处理即可。</p>
+</li>
+<li>
+<p>Java 的动态代理只能代理接口，若要动态代理类需要使用 <code>CGLIB</code> 库。</p>
+</li>
+</ul>
+<h3 id="动态代理源码简析">动态代理源码简析</h3>
+<p>从上面可以看到动态代理类是由 <code>Proxy.newProxyInstance()</code> 方法动态生成的，所以我们只需要从看这个方法就行了。</p>
+<pre><code class="language-java">public static Object newProxyInstance(ClassLoader loader,
+                                      Class&lt;?&gt;[] interfaces,
+                                      InvocationHandler h)
+    throws IllegalArgumentException {
+    Objects.requireNonNull(h);
+
+    ...
+
+        /*
+         * Look up or generate the designated proxy class.
+         * 生成代理类 Class 对象
+         */
+        Class&lt;?&gt; cl = getProxyClass0(loader, intfs);
+
+    /*
+         * Invoke its constructor with the designated invocation handler.
+         * 反射获取构造器生成代理类实例对象返回给调用者
+         */
+    try {
+        ...
+            final Constructor&lt;?&gt; cons = cl.getConstructor(constructorParams);
+        final InvocationHandler ih = h;
+        ...
+            return cons.newInstance(new Object[]{h});
+    } catch (IllegalAccessException | InstantiationException e) {
+        throw new InternalError(e.toString(), e);
+    } catch (InvocationTargetException e) {
+        Throwable t = e.getCause();
+        if (t instanceof RuntimeException) {
+            throw (RuntimeException) t;
+        } else {
+            throw new InternalError(t.toString(), t);
+        }
+    } catch (NoSuchMethodException e) {
+        throw new InternalError(e.toString(), e);
+    }
+}
+</code></pre>
+<p>再主要看 <code>getProxyClass0()</code> 方法是如何生成代理类 Class 对象的。</p>
+<pre><code class="language-java">/**
+     * Generate a proxy class.  Must call the checkProxyAccess method
+     * to perform permission checks before calling this.
+     */
+private static Class&lt;?&gt; getProxyClass0(ClassLoader loader,
+                                       Class&lt;?&gt;... interfaces) {
+    if (interfaces.length &gt; 65535) {
+        throw new IllegalArgumentException(&quot;interface limit exceeded&quot;);
+    }
+
+    // If the proxy class defined by the given loader implementing
+    // the given interfaces exists, this will simply return the cached copy;
+    // otherwise, it will create the proxy class via the ProxyClassFactory
+    return proxyClassCache.get(loader, interfaces);
+}
+</code></pre>
+<p><code>proxyClassCache</code> 缓存了代理类对象，方便复用，<code>proxyClassCache = new WeakCache&lt;&gt;(new KeyFactory(), new ProxyClassFactory());</code> <code>proxyClassCache</code> 是一个 <code>WeakCache</code> 对象，其构造器的 <code>ProxyClassFactory</code> 对象很重要，看名字就知道了，这个类就是专门来生成代理类的，上面的 <code>proxyClassCache.get()</code> 方法最终也是调用了其 <code>apply()</code> 方法来生成并返回的代理类，所以下面来看 <code>ProxyClassFactory</code> 的 <code>apply()</code> 方法的内部实现。</p>
+<pre><code class="language-java">@Override
+public Class&lt;?&gt; apply(ClassLoader loader, Class&lt;?&gt;[] interfaces) {
+
+    Map&lt;Class&lt;?&gt;, Boolean&gt; interfaceSet = new IdentityHashMap&lt;&gt;(interfaces.length);
+    for (Class&lt;?&gt; intf : interfaces) {
+        /*
+             * Verify that the class loader resolves the name of this
+             * interface to the same Class object.
+             * 验证 Proxy.newProxyInstance() 传寄来的 classLoader 和 interfaces 是否有效
+             */
+        Class&lt;?&gt; interfaceClass = null;
+        try {
+            interfaceClass = Class.forName(intf.getName(), false, loader);
+        } catch (ClassNotFoundException e) {
+        }
+        if (interfaceClass != intf) {
+            throw new IllegalArgumentException(
+                intf + &quot; is not visible from class loader&quot;);
+        }
+        /*
+             * Verify that the Class object actually represents an
+             * interface.
+             * 这里为了验证要代理的是否为接口，若不是接口则会抛出异常
+             */
+        if (!interfaceClass.isInterface()) {
+            throw new IllegalArgumentException(
+                interfaceClass.getName() + &quot; is not an interface&quot;);
+        }
+        ...
+    }
+
+    ...
+
+        /*
+         * Choose a name for the proxy class to generate.
+         * 为代理类生成一个名字，这里 proxyClassNamePrefix 值为 &quot;$Proxy&quot; num 从 0 开始，
+         * 所以这里解释了为什么生成出来的代理类名字时 $Proxy0
+         */
+        long num = nextUniqueNumber.getAndIncrement();
+    String proxyName = proxyPkg + proxyClassNamePrefix + num;
+
+    /*
+         * Generate the specified proxy class.
+         * 最终生成代理类 class 二级制文件，并存储来了本地，也就是运行时动态生成出了 .class 文件
+         */
+    byte[] proxyClassFile = ProxyGenerator.generateProxyClass(
+        proxyName, interfaces, accessFlags);
+    try {
+        return defineClass0(loader, proxyName,
+                            proxyClassFile, 0, proxyClassFile.length);
+    } catch (ClassFormatError e) {
+        /*
+             * A ClassFormatError here means that (barring bugs in the
+             * proxy class generation code) there was some other
+             * invalid aspect of the arguments supplied to the proxy
+             * class creation (such as virtual machine limitations
+             * exceeded).
+             */
+        throw new IllegalArgumentException(e.toString());
+    }
+}
+</code></pre>
+<p>当然我们也可以自己手动调用 <code>ProxyGenerator.generateProxyClass()</code> 方法来生成 <code>.class</code> 文件，然后反编译查看里面的内容，内部其实生成了接口的各个方法，然后再各个方法内部调用了 <code>h (InvocationHandler)</code> 的 <code>invoke(Object proxy, Method method, Object[] args)</code> 方法，转到了调用层。</p>
+<ul>
+<li><code>proxy</code> : 代理类</li>
+<li><code>method</code> : 调用的方法信息</li>
+<li><code>args</code> : 调用该方法的参数</li>
+</ul>
+<p>以上就是 Java 动态代理的介绍与分析，Spring 的 AOP 以及 Android Retrofit 框架的接口注解实现就是基于动态代理实现的，好像是基于 CGLIB，不过原理大多都是想通的。</p>
+<h3 id="参考文章">参考文章</h3>
+<ul>
+<li>
+<p><a href="https://www.cnblogs.com/flyoung2008/p/3251148.html">彻底理解JAVA动态代理</a></p>
+</li>
+<li>
+<p><a href="https://juejin.im/post/5c70094051882562a12aec51">深入理解动态代理</a></p>
+</li>
+</ul>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/android-jetpack-lifecycles">
+              <h3 class="post-title">
+                下一篇：Android Jetpack 系列之 Lifecycles
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

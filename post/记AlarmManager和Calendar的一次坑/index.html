@@ -1,0 +1,190 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>记AlarmManager和Calendar的一次坑 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">记AlarmManager和Calendar的一次坑</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2016-03-04</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>昨天在app内需要添加一个根据设置的早晚时间分别到点通知提示的一个功能，我的大致思路是开启一个Service，服务启动时获取到两个提示点的millis值，然后和当前的系统millis值比较，选取下一个最接近当前系统millis值的点来设置闹钟目标点。</p>
+<!--more-->
+<p>1、至于如何获取两个提示点的millis值，首先我这从配置文件获取的设置的时间格式为hour:minute(例如22:52)，然后提取出小时和分钟通过Calendar的set方法将小时和分钟设置进去，然后获取到该点的millis值来进行alarm的设置，获取millis值代码如下：</p>
+<pre><code class="language-java">Calendar calendar = Calendar.getInstance();
+calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hour));
+calendar.set(Calendar.MINUTE, Integer.parseInt(minute));
+long targetMillis = calendar.getTimeInMillis();
+</code></pre>
+<p>2、然后根据targetMillis设置Alarm：</p>
+<pre><code class="language-java">Intent intent = new Intent(ACTION_REMIND_NOTIFICATION);
+pendingIntent = PendingIntent.getBroadcast(RemindService.this, 0, intent, 0);
+alarmManager.set(AlarmManager.RTC_WAKEUP, targetMillis, pendingIntent);
+</code></pre>
+<p>这里的pendingIntent是用来定时到点之后发送一个广播，收到广播后然后重新获取到两个提示点的millis值，然后和当前的系统millis值比较，选取下一个下一个最接近当前系统millis值的点，然后再重新设置Alarm，如此循环下去</p>
+<p>然后就是测试.....</p>
+<p>测试发现是能够到点提醒的，但是发现通知弹出后过了几秒又弹通知（通过通知的声音判断的），大概连续弹了好几次才消失，要是用户碰到这样，肯定骂人，疯狂弹通知。后来找原因，找了很久，才想到<code>Calendar.getInstance()</code>里面除了小时分钟，还有秒、毫秒值，所以当闹钟触发时，广播发送后，然后重复第1步，获取两个点的millis值，来和当前系统的millils比较获取下一个最近的millis值来设置闹钟，就是这里出了问题，当执行<code>Calendar.getInstance()</code>时，由于又重新到的是当前时间点的Calendar实例，里面的秒和毫秒字段是当前的值，所以不固定，而我要获取的两个点的millis值肯定是固定值（这里不考虑日期），不能每次获取时millis在变动，所以手动设置下<code>Calendar.SECOND</code>和<code>Calendar.MILLISECOND</code>的字段，代码调整如下：</p>
+<pre><code class="language-java">Calendar calendar = Calendar.getInstance();
+calendar.set(Calendar.HOUR_OF_DAY, Integer.parseInt(hour));
+calendar.set(Calendar.MINUTE, Integer.parseInt(minute));
+calendar.set(Calendar.SECOND, 0); // 手动设置为0
+calendar.set(Calendar.MILLISECOND, 0);  // 手动设置为0
+long targetMillis = calendar.getTimeInMillis();
+</code></pre>
+<p>然后再测试.....</p>
+<p>发现我的机器上在最近任务列表下不清除掉当前程序（Flyme5系统），一切正常，到点正确通知，且通知一次，然后到下一个点再提醒，功能完全正常。但是发现在最近任务列表下清除掉当前程序后，到点后发现pendingIntent没有发送出去，并且到点后居然重新调用了Service的onCreate()和onStartCommand()方法，后来在stackoverflow上找到了一个解决办法就是只要pendingIntent的requestCode不设置成0（原因暂不明确）,还要给intent加个flag,代码如下：</p>
+<pre><code class="language-java">intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+// 之前的
+// pendingIntent = PendingIntent.getBroadcast(RemindService.this, 0, intent, 0);
+// 修改后的
+pendingIntent = PendingIntent.getBroadcast(RemindService.this, 1, intent, 0);
+</code></pre>
+<p>然后再测试，功能一切正常。</p>
+<h3 id="总结">总结</h3>
+<ul>
+<li>如果要根据小时和分钟通过Calendar获取一个时间点固定的millis值（排除日期），不要忘记Calendar的秒和毫秒字段需要手动重置。</li>
+<li>在使用AlarmManager的set方法时，为了保证pendingIntent能发送出去，pendingIntent的requestCode不要设置为0</li>
+</ul>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/Android-Scroll分析">
+              <h3 class="post-title">
+                下一篇：Android Scroll 分析
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

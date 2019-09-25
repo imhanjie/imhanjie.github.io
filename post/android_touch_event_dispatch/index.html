@@ -1,0 +1,511 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Android 事件分发机制 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Android 事件分发机制</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2018-11-12</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>之前一直对Android的事件分发机制似懂非懂，所以拿起「Android开发艺术探索」决定这两天好好学习这方面的知识顺便总结下，以便后面的复习。</p>
+<!--more-->
+<blockquote>
+<p>在看源码之前，我首先看的是这篇文章<a href="http://www.jianshu.com/p/2be492c1df96">「可能是讲解Android事件分发最好的文章」</a>，讲得很好，虽然文章内没有源码，当时看完后对看源码的理解有很大的好处。<br>
+.<br>
+这边文章主要讲到了一个很重要的点：若将布局看成一个树形结构，先是</p>
+<ul>
+<li><code>onInterceptTouchEvent()</code> 方法经历了从顶层向下</li>
+<li><code>onTouchEvent()</code> 方法经历了从底层向上(若所有的View都不拦截不消耗的情况下)</li>
+<li>若其中一个 ViewGroup 的 <code>onInterceptTouchEvent</code>  return true 拦截，直接跳转到此 ViewGroup 的父类 View 的 <code>dispatchOnTouchEvent</code> 方法中，表示 ViewGroup 自己处理事件。</li>
+</ul>
+<p>这些都会在下面的源码分析中能得到验证</p>
+</blockquote>
+<h4 id="点击事件的分发过程由三个很重要的方法完成">点击事件的分发过程由三个很重要的方法完成：</h4>
+<ul>
+<li>
+<p><code>public boolean dispatchTouchEvent(MotionEvent ev) {}</code><br>
+如果事件能够传递给当前 View，那么此方法一定会被调用，返回结果受当前 View 的 onTouchEvent 和下级 View 的 dispatchTouchEvent 方法的影响。</p>
+</li>
+<li>
+<p><code>public boolean onInterceptTouchEvent(MotionEvent ev) {}</code><br>
+在上面的 dispatchTouchEvent 方法内调用，此方法只有 ViewGroup 有，View 没有，用来判断是否拦截某个事件，如果当前 View 拦截了某个事件，那么在同一个事件序列中，此方法不会被再次调用 ( 后面的源码中可以很清楚的验证 )，返回结果表示是否拦截当前事件。</p>
+</li>
+<li>
+<p><code>public boolean onTouchEvent(MotionEvent event) {}</code><br>
+也是在 dispatchTouchEvent 方法内调用，用来处理点击事件，返回结果表示是否消耗当前事件，如果不消耗(return false)，则在同一事件序列中，当前 View 无法再次接收到事件。</p>
+</li>
+</ul>
+<h5 id="下面是三者关系的伪代码">下面是三者关系的伪代码：</h5>
+<pre><code class="language-java">public boolean dispatchTouchEvent(MotionEvent ev){
+	boolean consume = false;
+	if(onInterceptTouchEvent(ev)){
+		consume = onTouchEvent(ev);
+	}else{
+		consume = child.dispatchTouchEvent(ev);
+	}
+	return consume;
+}
+</code></pre>
+<h5 id="当一个点击事件产生后它的传递过程遵循如下顺序activity-window-view">当一个点击事件产生后，它的传递过程遵循如下顺序：Activity -&gt; Window -&gt; View</h5>
+<h2 id="activity-window">Activity -&gt; Window</h2>
+<p>源码: Activity#dispatchTouchEvent()</p>
+<pre><code class="language-java">public boolean dispatchTouchEvent(MotionEvent ev) {
+    if (ev.getAction() == MotionEvent.ACTION_DOWN) {
+        onUserInteraction();
+    }
+    if (getWindow().superDispatchTouchEvent(ev)) {
+        return true;
+    }
+    return onTouchEvent(ev);
+}
+</code></pre>
+<h2 id="window-view">Window -&gt; View</h2>
+<p>源码: PhoneWindow#superDispatchTouchEvent()</p>
+<pre><code class="language-java">public boolean superDispatchTouchEvent(MotionEvent ev){
+	return mDecor.superDispatchTouchEvent(ev);
+}
+</code></pre>
+<p>这里直接将事件传给了 DecorView，而 DecorView 是我们 setContentView 的父布局，肯定会传递到我们的顶级View 的。</p>
+<h2 id="顶级view对点击事件的分发过程">顶级View对点击事件的分发过程</h2>
+<pre><code class="language-java">
+###PART ONE 源码: ViewGroup的dispatchTouchEvent()方法的部分代码片段###
+
+... 
+
+// Check for interception.
+final boolean intercepted;
+if (actionMasked == MotionEvent.ACTION_DOWN
+        || mFirstTouchTarget != null) {
+    final boolean disallowIntercept = (mGroupFlags &amp; FLAG_DISALLOW_INTERCEPT) != 0;
+    if (!disallowIntercept) {
+        intercepted = onInterceptTouchEvent(ev);
+        ev.setAction(action); // restore action in case it was changed
+    } else {
+        intercepted = false;
+    }
+} else {
+    // There are no touch targets and this action is not an initial down
+    // so this view group continues to intercept touches.
+    intercepted = true;
+}
+
+...
+
+
+</code></pre>
+<ul>
+<li>mFirstTouchTarget 的赋值情况：若 ViewGroup 的子元素成功处理时，mFirstTouchTarget 会被赋值并指向子元素(后面会验证)，一旦事件由当前 ViewGroup 处理时，mFirstTouchTarget 为 null，所以后续的MOVE,UP 事件到来时，由于 <code>actionMasked == MotionEvent.ACTION_DOWN||mFirstTouchTarget != null</code> 都不成立，所以 intercepted = true; 所以 onInterceptTouchEvent 将不会再调用到，验证了上面提到的结论。</li>
+<li>还有种特殊情况 <code>FLAG_DISALLOW_INTERCEPT</code> 这个标记位，这个标记位可以通过<code>requestDisallowInterceptTouchEvent()</code> 这个方法设置，一般子元素调用这个方法后，disallowIntercept为true了，所以父View的 <code>onInterceptTouchEvent()</code> 也执行不到了，所以父 View 就不能拦截事件了,<strong>但是ACTION_DOWN 事件除外</strong>，父 View 还是会执行到 <code>onInterceptTouchEvent()</code>来决定是否拦截的，因为看下面的源码片段,源码中就位于 PART ONE 的上面</li>
+</ul>
+<pre><code class="language-java">###PART TWO 源码: ViewGroup的dispatchTouchEvent()方法的部分代码片段###
+
+...
+
+// Handle an initial down.  处理最初的DOWN事件
+if (actionMasked == MotionEvent.ACTION_DOWN) {
+    // Throw away all previous state when starting a new touch gesture.
+    // The framework may have dropped the up or cancel event for the previous gesture
+    // due to an app switch, ANR, or some other state change.
+    cancelAndClearTouchTargets(ev);
+    resetTouchState();
+}
+
+后面紧接PART ONE片段
+
+
+</code></pre>
+<ul>
+<li>在<code>resetTouchState()</code>的方法内对<code>FLAG_DISALLOW_INTERCEPT</code>的标记位进行了重置，所以<code>DOWN</code>事件到来时<code>FLAG_DISALLOW_INTERCEPT</code>的标记位进行了重置，所以验证了上面提到的点：<code>requestDisallowInterceptTouchEvent()</code>方法并不能影响到ViewGroup对<code>ACTION_DOWN</code>事件的处理</li>
+</ul>
+<h5 id="到这里intercepted值有两种结果要么为false要么为true">到这里，intercepted值有两种结果，要么为false，要么为true。</h5>
+<h2 id="intercepted-为-true的情况">intercepted 为 true的情况</h2>
+<p>所以，先来看为true的这种情况的源码，<strong>这部分源码应该是表示ViewGroup自己处理</strong></p>
+<p>在源码中若intercepted为tru，则mFirstTouchTarget为null(前面提过了)直接执行到这里：</p>
+<pre><code class="language-java">###PART THREE 源码: ViewGroup的dispatchTouchEvent()方法的部分代码片段###
+
+// Dispatch to touch targets.
+if (mFirstTouchTarget == null) {
+    // No touch targets so treat this as an ordinary view.
+    handled = dispatchTransformedTouchEvent(ev, canceled, null,
+            TouchTarget.ALL_POINTER_IDS);
+} else {
+	...
+}
+
+</code></pre>
+<p>跟进dispatchTransformedTouchEvent()方法代码片段</p>
+<pre><code class="language-java">...
+
+if (child == null) {
+    handled = super.dispatchTouchEvent(event);
+} else {
+    handled = child.dispatchTouchEvent(event);
+}
+
+...
+</code></pre>
+<p><code>dispatchTransformedTouchEvent()</code>第三个参数是child参数，这里上面传了null，所以执行<code>handled = super.dispatchTouchEvent(event)</code>,因为ViewGroup继承自View，所以ViewGroup要想自己处理事件，肯定要调用自己的onTouch、onTouchEvent、onClick方法，所以要想ViewGroup处理自己，就调用父类View的<code>dispatchTouchEvent()</code>方法，把自己当做一个View来处理这些事件，所以这里调用了<code>super.dispatchTouchEvent(event)</code>，至于View的<code>dispatchTouchEvent()</code>事件怎么处理的，后面会分析到。</p>
+<p>再看刚才的另一种结果，intercepted为false，这种结果的代码片段在PART THREE的上面，因为刚才intercepted为true，所以跳过了下面的代码，来看下面的代码片段,下面的代码的执行条件是**<font color=red>DOWN事件</font>并且 intercepted为false，意味着ViewGroup不拦截事件，应向子元素分发事件**</p>
+<pre><code class="language-java">###PART FOUR 源码: ViewGroup的dispatchTouchEvent()方法的部分代码片段###
+
+final View[] children = mChildren;
+for (int i = childrenCount - 1; i &gt;= 0; i--) {
+    final int childIndex = customOrder
+            ? getChildDrawingOrder(childrenCount, i) : i;
+    final View child = (preorderedList == null)
+            ? children[childIndex] : preorderedList.get(childIndex);
+
+    // If there is a view that has accessibility focus we want it
+    // to get the event first and if not handled we will perform a
+    // normal dispatch. We may do a double iteration but this is
+    // safer given the timeframe.
+    if (childWithAccessibilityFocus != null) {
+        if (childWithAccessibilityFocus != child) {
+            continue;
+        }
+        childWithAccessibilityFocus = null;
+        i = childrenCount - 1;
+    }
+
+    if (!canViewReceivePointerEvents(child)
+            || !isTransformedTouchPointInView(x, y, child, null)) {
+        ev.setTargetAccessibilityFocus(false);
+        continue;
+    }
+
+    newTouchTarget = getTouchTarget(child);
+    if (newTouchTarget != null) {
+        // Child is already receiving touch within its bounds.
+        // Give it the new pointer in addition to the ones it is handling.
+        newTouchTarget.pointerIdBits |= idBitsToAssign;
+        break;
+    }
+	
+    resetCancelNextUpFlag(child);
+    if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
+        // Child wants to receive touch within its bounds.
+        mLastTouchDownTime = ev.getDownTime();
+        if (preorderedList != null) {
+            // childIndex points into presorted list, find original index
+            for (int j = 0; j &lt; childrenCount; j++) {
+                if (children[childIndex] == mChildren[j]) {
+                    mLastTouchDownIndex = j;
+                    break;
+                }
+            }
+        } else {
+            mLastTouchDownIndex = childIndex;
+        }
+        mLastTouchDownX = ev.getX();
+        mLastTouchDownY = ev.getY();
+        newTouchTarget = addTouchTarget(child, idBitsToAssign);
+        alreadyDispatchedToNewTouchTarget = true;
+        break;
+    }
+
+    // The accessibility focus didn't handle the event, so clear
+    // the flag and do a normal dispatch to all children.
+    ev.setTargetAccessibilityFocus(false);
+}
+
+</code></pre>
+<p>代码比较长，不过不是很难理解，大致逻辑是这样的：<br>
+遍历ViewGroup的所有元素，如果触摸的事件落在遍历到的view(你都没touch到的view，还传递分发给他事件干嘛，对吧？)，并且当前遍历到的元素正在播放动画(有点奇怪，不过不影响)，满足这两个条件，这个元素才能接收到父元素传递给他的事件。若两个条件有一个不满足就continue，继续遍历。假如遍历到了能够接收到事件的子元素时，便会执行到上面代码PART FOUR的这里：</p>
+<pre><code class="language-java">if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
+	...
+}
+</code></pre>
+<p>这个方法刚才也看到过了：</p>
+<pre><code class="language-java">...
+
+if (child == null) {
+    handled = super.dispatchTouchEvent(event);
+} else {
+    handled = child.dispatchTouchEvent(event);
+}
+
+...
+</code></pre>
+<p>这里注意了，刚才ViewGroup自己处理的时候，第三个参数child传的是null，不过，这里是ViewGroup不处理，传递给子View，所以第三个参数child传递的是刚才遍历到的将要接收到传递的事件的子元素，所以执行了这句<code>handled = child.dispatchTouchEvent(event);</code>，很明显，执行了子元素的<code>dispatchTouchEvent()</code>，子元素可能是View也可能是ViewGroup，如果是ViewGroup的话，就跟上面分析父元素的处理过程一样，可能这样层层传递下去....，如果子View是View，那就更简单了，因为View的<code>dispatchTouchEvent()</code>方法内<code>没有onInterceptTouchEvent</code>方法，所以<code>dispatchTouchEvent()</code>方法处理要简单的多。</p>
+<p>最后，if判断的<code>dispatchTransformedTouchEvent()</code>，会有一个返回值，看源码发现，那个<code>dispatchTransformedTouchEvent()</code>的返回值就是那个handled，即<code>child.dispatchTouchEvent(event)</code>的返回值，如果返回了true，表示子元素来处理这个事件了，就会执行到了if判断里面的这一句:<code>newTouchTarget = addTouchTarget(child, idBitsToAssign);</code>，在<code>addTouchTarget()</code>中完成了对<code>mFirstTouchTarget</code>的赋值(验证前面反复提到的结论)，然后最后一句<code>break;</code>，打断for循环，因为已经有子元素处理了，所以不需要遍历了。如果<code>child.dispatchTouchEvent(event)</code>的返回值返回了false，表示这个子元素也不处理，所以mFirstTouchTarget无法赋值，即为null(验证前面反复提到的结论)，接着继续for循环去遍历下一个子元素....</p>
+<p>刚才提到，如果遍历到的子元素是一个View，因为View的<code>dispatchTouchEvent()</code>内没有<code>onInterceptTouchEvent</code>方法，所以<code>dispatchTouchEvent()</code>方法处理要简单的多，下面立马分析View对点击事件的处理过程。</p>
+<h2 id="view对点击事件的处理过程">View对点击事件的处理过程</h2>
+<ul>
+<li>下面是<strong>View的dispatchTouchEvent()方法</strong>部分代码</li>
+</ul>
+<pre><code class="language-java">    public boolean dispatchTouchEvent(MotionEvent event) {
+
+		...		
+
+        boolean result = false;
+
+		...
+
+        if (onFilterTouchEventForSecurity(event)) {
+            //noinspection SimplifiableIfStatement
+            ListenerInfo li = mListenerInfo;
+            if (li != null &amp;&amp; li.mOnTouchListener != null
+                    &amp;&amp; (mViewFlags &amp; ENABLED_MASK) == ENABLED
+                    &amp;&amp; li.mOnTouchListener.onTouch(this, event)) {
+                result = true;
+            }
+
+            if (!result &amp;&amp; onTouchEvent(event)) {
+                result = true;
+            }
+        }
+
+		...
+
+        return result;
+    }
+</code></pre>
+<p>如果有设置过onTouchListener，那么<code>mOnTouchListener.onTouch</code>将会执行，<strong>如果onTouch返回true</strong>，则resulr为true，所以下面的那个if判断内的**<code>onTouchEvent(event)</code>不会执行到**。相反，<strong>若onTouch返回false，<code>onTouchEvent(event)</code>会执行得到</strong>，所以onTouch的优先级高于onTouchEvent，这样做的好处是<strong>方便在外界处理点击事件</strong>。</p>
+<ul>
+<li>接着分析onTouchEvent()方法内的代码</li>
+</ul>
+<pre><code class="language-java">
+if ((viewFlags &amp; ENABLED_MASK) == DISABLED) {
+    if (action == MotionEvent.ACTION_UP &amp;&amp; (mPrivateFlags &amp; PFLAG_PRESSED) != 0) {
+        setPressed(false);
+    }
+    // A disabled view that is clickable still consumes the touch
+    // events, it just doesn't respond to them.
+    return (((viewFlags &amp; CLICKABLE) == CLICKABLE
+            || (viewFlags &amp; LONG_CLICKABLE) == LONG_CLICKABLE)
+            || (viewFlags &amp; CONTEXT_CLICKABLE) == CONTEXT_CLICKABLE);
+}
+
+</code></pre>
+<p>先看当View处于不可用的状态下点击事件的处理过程，很显然，不可用状态下的View照样会消耗点击事件，尽管它看起来不可用。</p>
+<p>继续看:</p>
+<pre><code class="language-java">if (((viewFlags &amp; CLICKABLE) == CLICKABLE ||
+        (viewFlags &amp; LONG_CLICKABLE) == LONG_CLICKABLE) ||
+        (viewFlags &amp; CONTEXT_CLICKABLE) == CONTEXT_CLICKABLE) {
+    switch (action) {
+        case MotionEvent.ACTION_UP:
+            boolean prepressed = (mPrivateFlags &amp; PFLAG_PREPRESSED) != 0;
+            if ((mPrivateFlags &amp; PFLAG_PRESSED) != 0 || prepressed) {
+				
+				...
+				
+                if (!mHasPerformedLongPress &amp;&amp; !mIgnoreNextUpEvent) {
+                    // This is a tap, so remove the longpress check
+                    removeLongPressCallback();
+
+                    // Only perform take click actions if we were in the pressed state
+                    if (!focusTaken) {
+                        // Use a Runnable and post this rather than calling
+                        // performClick directly. This lets other visual state
+                        // of the view update before click actions start.
+                        if (mPerformClick == null) {
+                            mPerformClick = new PerformClick();
+                        }
+                        if (!post(mPerformClick)) {
+                            performClick();
+                        }
+                    }
+                }
+
+				...
+
+            }
+
+			...
+
+            break;
+    }
+
+    return true;
+}
+</code></pre>
+<p>从上面的代码来看，只要View的<code>CLICKABLE</code>和<code>LONG CLICKABLE</code>有一个为true，那么他就会消耗这个事件，因为return了true，不管他是不是DISABLE状态。然后当<code>ACTION_UP</code>触发时，会执行<code>performClick()</code>，在<code>performClick()</code>的内部，如果有设置onClickListener，那么<code>performClick()</code>方法内部会调用他的onClick方法，如下所示：</p>
+<pre><code class="language-java">public boolean performClick() {
+    final boolean result;
+    final ListenerInfo li = mListenerInfo;
+    if (li != null &amp;&amp; li.mOnClickListener != null) {
+        playSoundEffect(SoundEffectConstants.CLICK);
+        li.mOnClickListener.onClick(this);
+        result = true;
+    } else {
+        result = false;
+    }
+
+    sendAccessibilityEvent(AccessibilityEvent.TYPE_VIEW_CLICKED);
+    return result;
+}
+</code></pre>
+<p>View的<code>LONG_CLICKABLE</code>默认是false，而<code>CLICKABLE</code>属性则要看具体的View了，例如，Button的<code>CLICKABLE</code>默认为true，TextView的<code>CLICKABLE</code>默认为false，只要执行了<code>setOnClickListener()</code>或者<code>setOnLongClickListener()</code>都会将<code>CLICKABLE</code>或者<code>LONG_CLICKABLE</code>置为true，看源码就知道了：</p>
+<pre><code class="language-java">public void setOnClickListener(@Nullable OnClickListener l) {
+    if (!isClickable()) {
+        setClickable(true);
+    }
+    getListenerInfo().mOnClickListener = l;
+}
+</code></pre>
+<pre><code class="language-java">public void setOnLongClickListener(@Nullable OnLongClickListener l) {
+    if (!isLongClickable()) {
+        setLongClickable(true);
+    }
+    getListenerInfo().mOnLongClickListener = l;
+}
+</code></pre>
+<hr>
+<h5 id="下结论都是书上总结的">下结论都是书上总结的：</h5>
+<ol>
+<li>同一事件序列是指从手指接触屏幕的那一刻起，到手指离开屏幕的那一刻结束，在这个过程中所产生的一系列事件，这个事件序列以down事件开始，中间含有数量不定的move事件，最终以up事件结束。</li>
+<li>正常情况下，一个事件序列只能被一个View拦截且消耗。这一条原因可以参考(3)，因为一旦一个元素拦截了某此事件，那么同一事件序列内的所有事件都会直接交给它处理，因此同一事件序列中的事件不能分别由两个View同时处理，但是通过特殊手段可以做到，比如一个View将本该自己处理的事件通过<code>onTouchEvent</code>强行传递给其他View处理</li>
+<li>某个View一旦决定拦截，那么这一个事件序列都只能由它处理（如果事件能够传递给他的话），并且它的<code>onInterceptTouchEvent</code>不会再被调用。这条也很好理解，就是说当一个View决定拦截一个事件后，那么系统会把同一事件序列内的其他方法都直接交给他来处理，因此不会再调用这个View的<code>onInterceptTouchEvent</code>去询问它是否要拦截了</li>
+<li>某个View一旦开始处理事件，<strong>如果它不消耗<code>ACTION_DOWN</code>事件(<code>onTouchEvent</code>返回了false)，那么同一事件序列中的其他事件都不会再交给他来处理</strong>，并且事件将重新交给它的父元素处理，即父元素的<code>onTouchEvent</code>会被调用。意思是事件一旦交给一个View处理，那么它就必须消耗掉，否则同一事件序列中剩下的事件就不再交给他来处理了。</li>
+<li>如果View不消耗除<code>ACTION_DOWN</code>以外的其他事件，那么这个点击事件会消失，此时父元素的<code>onTouchEvent</code>并不会被调用，并且当前View可以持续收到后续的点击事件，最终这些消失的点击事件会传递给Activity处理</li>
+<li>ViewGroup默认不拦截任何点击事件。Android源码中ViewGroup的<code>onInterceptTouchEven</code>t方法默认返回false</li>
+<li>View没有<code>onInterceptTouchEvent</code>方法，一旦有点击事件传递给他，那么它的<code>onTouchEvent</code>方法就会被调用</li>
+<li>View的<code>onTouchEvent</code>默认都会消耗事件(返回true)，除非它是不可点击的(clickable和longClickable同时为false)。View的longClickable属性默认都为false，clickable属性要分情况，不必多说</li>
+<li>View的enable属性不影响onTouchEvent的默认返回值。哪怕一个View是disable状态的，只要它的clickable或者longClickable有一个为true，那么它的<code>onTouchEvent</code>就返回true</li>
+<li>onClick会发生的前提是当前View可点击的，并且他收到了down和up事件</li>
+<li>事件传递过程是由外向内的，即事件总是先传递给父元素，然后再有父元素分发给子View，通过<code>requestDisallowInterceptTouchEvent</code>方法可以在子元素中干预父元素的事件分发过程，当然<code>ACTION_DOWN</code>不能干预</li>
+</ol>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/android_remoteviews">
+              <h3 class="post-title">
+                下一篇：Android RemoteViews
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

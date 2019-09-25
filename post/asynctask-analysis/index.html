@@ -1,0 +1,447 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>AsyncTask 源码分析 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">AsyncTask 源码分析</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2016-09-08</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>AsyncTask 是 Android 提供给我们的一个轻量级处理异步任务的类，可以把执行的进度和执行的结果反馈给 UI 线程来更新  UI。</p>
+<!--more-->
+<blockquote>
+<ul>
+<li>文章来源：itsCoder 的 <a href="https://github.com/itsCoder/weeklyblog">WeeklyBolg</a> 项目</li>
+<li>itsCoder主页：<a href="http://itscoder.com/">http://itscoder.com/</a></li>
+<li>作者：<a href="http://melodyxxx.com/">Melodyxxx</a></li>
+<li>审阅者：<a href="https://github.com/laobie">Jaeger</a></li>
+</ul>
+</blockquote>
+<h2 id="asynctask的使用">AsyncTask的使用</h2>
+<h3 id="asynctask的基本使用">AsyncTask的基本使用</h3>
+<p>Android 已经为我们将 AsyncTask 封装的已经很好了，所以 AsyncTask 使用起来也比较简单，下面是一般的使用方法：</p>
+<pre><code class="language-java">new AsyncTask&lt;String, Integer, Void&gt;() {
+
+            // 运行在UI线程，异步任务执行前调用
+            @Override
+            protected void onPreExecute() {
+
+            }
+
+            // 运行在子线程，用于处理耗时操作
+            @Override
+            protected Void doInBackground(String... strings) {
+                // ...
+
+                // 触发onProgressUpdate方法更新进度信息
+                publishProgress(0);
+
+                return null;
+            }
+
+            // 运行在UI线程，可用于更新进度条进度信息
+            @Override
+            protected void onProgressUpdate(Integer... values) {
+                // update progress
+            }
+
+            // 运行在UI线程，异步任务执行完毕后调用
+            @Override
+            protected void onPostExecute(Void aVoid) {
+
+            }
+
+        }.execute(&quot;task_params&quot;);
+</code></pre>
+<h3 id="asynctask的取消">AsyncTask的取消</h3>
+<p>可以手动调用 AsyncTask 的<code>cancle()</code>方法来尝试取消一个任务，需要注意的是这里的取消只是改变任务的状态标记，并不会立马停止后台任务，可以通过<code>isCancelled()</code>方法获取当前的取消状态来做相应的处理，例如可以在<code>doInBackground()</code>方法里面像下面这样处理，不断的检测状态：</p>
+<pre><code class="language-java">@Override
+protected Void doInBackground(String... strings) {
+
+	for (int i = 0; i &lt;= 10; i++){
+		// ...
+		if (isCancelled()){
+			break;
+		}
+	}
+
+    return null;
+}
+</code></pre>
+<h2 id="asynctask的工作原理分析">AsyncTask的工作原理分析</h2>
+<blockquote>
+<p>下面的分析的为Android 5.0的源码</p>
+</blockquote>
+<p>先从 AsyncTask 从 AsyncTask 的执行入口方法<code>execute()</code>开始分析</p>
+<pre><code class="language-java">@MainThread
+public final AsyncTask&lt;Params, Progress, Result&gt; execute(Params... params) {
+    return executeOnExecutor(sDefaultExecutor, params);
+}
+</code></pre>
+<p>内部调用了 AsyncTas k的<code>executeOnExecutor()</code>方法，跟进去</p>
+<pre><code class="language-java">@MainThread
+public final AsyncTask&lt;Params, Progress, Result&gt; executeOnExecutor(Executor exec,
+        Params... params) {
+
+    // 首先是对当前的状态进行检测，如果当前任务正在进行或者已经完成，则会抛出异常
+    if (mStatus != Status.PENDING) {
+        switch (mStatus) {
+            case RUNNING:
+                throw new IllegalStateException(&quot;Cannot execute task:&quot;
+                        + &quot; the task is already running.&quot;);
+            case FINISHED:
+                throw new IllegalStateException(&quot;Cannot execute task:&quot;
+                        + &quot; the task has already been executed &quot;
+                        + &quot;(a task can be executed only once)&quot;);
+        }
+    }
+
+    // 将状态设置为&quot;正在进行&quot;
+    mStatus = Status.RUNNING;
+
+    // 回调我们自己可以复写的onPreExecute()方法
+    onPreExecute();
+
+    // 将我们传进来的参数赋给mWorker.mParams
+    mWorker.mParams = params;
+    exec.execute(mFuture);
+
+    return this;
+}
+</code></pre>
+<p>上面回调了<code>onPreExecute()</code>方法，而当前线程为 AsyncTask 创建并启动的线程，所以<strong>AsyncTask 启动必须在 UI 线程，不能在子线程中</strong>，否则<code>onPreExecute()</code>方法会在子线程中被调用。</p>
+<p>在 AsyncTask 执行入口的 execute 方法中，将 sDefaultExecutor 传递给了 executeOnExecutor 的第一个参数，即上面的 exec ，这里的 sDefaultExecutor 是一个串行线程池，一个进程中的所有 AsyncTask 全部在这个串行线程池中排队执行：</p>
+<pre><code class="language-java">private static volatile Executor sDefaultExecutor = SERIAL_EXECUTOR;
+</code></pre>
+<pre><code class="language-java">public static final Executor SERIAL_EXECUTOR = new SerialExecutor();
+</code></pre>
+<pre><code class="language-java">    private static class SerialExecutor implements Executor {
+        final ArrayDeque&lt;Runnable&gt; mTasks = new ArrayDeque&lt;Runnable&gt;();
+        Runnable mActive;
+
+        public synchronized void execute(final Runnable r) {
+            // 将任务排队处理
+            mTasks.offer(new Runnable() {
+                public void run() {
+                    try {
+                        r.run();
+                    } finally {
+                        scheduleNext();
+                    }
+                }
+            });
+            if (mActive == null) {
+                // 当前没有正在执行的任务，取出下一个任务执行
+                scheduleNext();
+            }
+        }
+
+        protected synchronized void scheduleNext() {
+            if ((mActive = mTasks.poll()) != null) {
+                // 取出下一个任务放进THREAD_POOL_EXECUTOR线程池执行
+                THREAD_POOL_EXECUTOR.execute(mActive);
+            }
+        }
+    }
+</code></pre>
+<p>可以看到，这个线程池的 execute 方法会将任务进行排队，然后判断当前若没有正在执行的任务，则取出一个任务放进<code>THREAD_POOL_EXECUTOR</code>线程池去执行，而这个<code>THREAD_POOL_EXECUTOR</code>是一个并行线程池。所以又可以得出的结论是，<strong>AsyncTaks 内有两个线程池，一个串行线程池和一个并行线程池，串行线程池用于给任务排队使用，而<code>THREAD_POOL_EXECUTOR</code>线程池才是任务真正执行的地方。</strong></p>
+<p>然后回到上面的<code>executeOnExecutor()</code>方法内的<code>exec.execute(mFuture)</code>这一行，由刚才分析可知这个 mFuture 就是我们的任务了，这个任务 mFuture 是在 AsyncTask 的构造器中初始化的：</p>
+<pre><code class="language-java">public AsyncTask() {
+    mWorker = new WorkerRunnable&lt;Params, Result&gt;() {
+        public Result call() throws Exception {
+            mTaskInvoked.set(true);
+
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+            //noinspection unchecked
+            Result result = doInBackground(mParams);
+            Binder.flushPendingCommands();
+            return postResult(result);
+        }
+    };
+
+    mFuture = new FutureTask&lt;Result&gt;(mWorker) {
+        @Override
+        protected void done() {
+            try {
+                postResultIfNotInvoked(get());
+            } catch (InterruptedException e) {
+                android.util.Log.w(LOG_TAG, e);
+            } catch (ExecutionException e) {
+                throw new RuntimeException(&quot;An error occurred while executing doInBackground()&quot;,
+                        e.getCause());
+            } catch (CancellationException e) {
+                postResultIfNotInvoked(null);
+            }
+        }
+    };
+}
+</code></pre>
+<p>可以看到 mFuture 初始化的时候用到了 mWorker ，先记住 mWorker 里面有个<code>call()</code>方法，再看 mFuture 的构造方法，可以看到，mFuture 将 mWorke r赋值给了 mFuture 内的 callable 对象：</p>
+<pre><code class="language-java">public FutureTask(Callable&lt;V&gt; callable) {
+    if (callable == null)
+        throw new NullPointerException();
+    // mFuture将mWorker赋值给了mFuture内的callable对象
+    this.callable = callable;
+    this.state = NEW;       // ensure visibility of callable
+}
+</code></pre>
+<p>前面说了，AsyncTask 启动执行后，mFuture 会被放到<code>THREAD_POOL_EXECUTOR</code>中去执行，执行会调用 mFuture 的<code>run()</code>方法，所以下面看 mFuture 对应的的 FutureTask 中的<code>run()</code>方法：</p>
+<pre><code class="language-java">public void run() {
+    if (state != NEW ||
+        !U.compareAndSwapObject(this, RUNNER, null, Thread.currentThread()))
+        return;
+    try {
+        // 这里的c为之前的mWorker对象
+        Callable&lt;V&gt; c = callable;
+        if (c != null &amp;&amp; state == NEW) {
+            V result;
+            boolean ran;
+            try {
+                // 调用mWorker的call()方法
+                result = c.call();
+                ran = true;
+            } catch (Throwable ex) {
+                result = null;
+                ran = false;
+                setException(ex);
+            }
+            if (ran)
+                set(result);
+        }
+    } finally {
+        // runner must be non-null until state is settled to
+        // prevent concurrent calls to run()
+        runner = null;
+        // state must be re-read after nulling runner to prevent
+        // leaked interrupts
+        int s = state;
+        if (s &gt;= INTERRUPTING)
+            handlePossibleCancellationInterrupt(s);
+    }
+}
+</code></pre>
+<p>所以执行 mFuture 后会调用 mWorker 的<code>call()</code>方法，mWorker 的<code>call()</code>方法实现如下：</p>
+<pre><code class="language-java">mWorker = new WorkerRunnable&lt;Params, Result&gt;() {
+    public Result call() throws Exception {
+        mTaskInvoked.set(true);
+
+        Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+        //noinspection unchecked
+        Result result = doInBackground(mParams);
+        Binder.flushPendingCommands();
+        return postResult(result);
+    }
+};
+</code></pre>
+<p><code>call()</code>方法内回调了熟悉的<code>doInBackground()</code>方法，并将之前保存起来的 mWorker 内的 mParams 传给了它。需要注意的是，当前线程已经切换到了线程池中，而非 UI 线程中，所以<code>doInBackground()</code>方法是在非 UI 线程中调用的。然后将<code>doInBackground()</code>执行完的返回值 result 传给了<code>postResult()</code>，跟进去看<code>postResult()</code>的实现：</p>
+<pre><code class="language-java">private Result postResult(Result result) {
+    @SuppressWarnings(&quot;unchecked&quot;)
+    Message message = getHandler().obtainMessage(MESSAGE_POST_RESULT,
+            new AsyncTaskResult&lt;Result&gt;(this, result));
+    message.sendToTarget();
+    return result;
+}
+</code></pre>
+<p>这里使用 Handler 发送了一个<code>MESSAGE_POST_RESULT</code>的消息，这里<code>getHandler()</code>获取到的 Handler 是一个与 UI 主线程 Looper 相关联的 sHandler，下面是 sHandler 的获取和实例化过程。</p>
+<pre><code class="language-java">private static Handler getHandler() {
+    synchronized (AsyncTask.class) {
+        if (sHandler == null) {
+            sHandler = new InternalHandler();
+        }
+        return sHandler;
+    }
+}
+</code></pre>
+<pre><code class="language-java">private static class InternalHandler extends Handler {
+    public InternalHandler() {
+        // 与UI主线程的Looper关联
+        super(Looper.getMainLooper());
+    }
+
+    @SuppressWarnings({&quot;unchecked&quot;, &quot;RawUseOfParameterizedType&quot;})
+    @Override
+    public void handleMessage(Message msg) {
+        AsyncTaskResult&lt;?&gt; result = (AsyncTaskResult&lt;?&gt;) msg.obj;
+        switch (msg.what) {
+            case MESSAGE_POST_RESULT:
+                // There is only one result
+                result.mTask.finish(result.mData[0]);
+                break;
+            case MESSAGE_POST_PROGRESS:
+                result.mTask.onProgressUpdate(result.mData);
+                break;
+        }
+    }
+}
+</code></pre>
+<p>通过使用 sHandler 发送<code>MESSAGE_POST_RESULT</code>消息，从线程池中切换到 UI 主线程中，然后执行 AsyncTask 的<code>finish()</code>方法：</p>
+<pre><code class="language-java">private void finish(Result result) {
+    if (isCancelled()) {
+        onCancelled(result);
+    } else {
+        onPostExecute(result);
+    }
+    mStatus = Status.FINISHED;
+}
+</code></pre>
+<p>在 AsyncTask 的<code>finish()</code>方法中首先会判断当前任务的状态是否已取消，如果已取消则会回调<code>onCancelled()</code>方法，否则直接回调<code>onPostExecute()</code>方法，最后将任务的状态设置为<code>FINISHED</code>完成状态。</p>
+<h2 id="asynctask并行">AsyncTask并行</h2>
+<p>在 Android 1.6 之前，AsyncTask 是串行执行任务的，Android 1.6 开始 AsyncTask 开始采用线程池处理并行任务，从 Android 3.0 开始，为了避免 AsyncTask 所带来的并发错误，AsyncTask 又采用一个线程来串行执行任务。</p>
+<p>根据上面 Android 5.0 的源码分析可以看到 AsyncTask 是串行执行任务的，当然我们也可以手动使其并行执行任务，只要执行时把<code>execute(params)</code>改成<code>executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,params)</code>即可，不过需要注意只能在 Android 3.0+ 才能这样做。</p>
+<h2 id="总结">总结</h2>
+<ul>
+<li>AsyncTask 使用起来比较方便，适合不是特别耗时的操作。</li>
+<li>AsyncTask 的 execute方法必须在主线程中调用。</li>
+<li>再次启动一个已执行过的 AsyncTask 对象会抛异常。</li>
+<li>AsyncTask 在不同的 Android 版本上会有不同的表现。</li>
+</ul>
+<blockquote>
+<p>如果还不了解线程池方面的文章，可以看看Joe的这个: <a href="http://extremej.itscoder.com/threadpoolexecutor_source/">ThreadPoolExecutor源码学习笔记</a></p>
+</blockquote>
+<blockquote>
+<p>本文参考资料《Android开发艺术探索》</p>
+</blockquote>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/use_google_play_lvl">
+              <h3 class="post-title">
+                下一篇：从注册 Google Play 开发者到如何使用 Google LVL 验证服务
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

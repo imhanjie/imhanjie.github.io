@@ -1,0 +1,464 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>RxJava 2 | retryWhen 操作符源码分析 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">RxJava 2 | retryWhen 操作符源码分析</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2019-07-18</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <!--more-->
+<h3 id="基本使用">基本使用</h3>
+<p><code>retryWhen</code> 操作符的作用是在上游发射了一个错误事件时，可以根据条件自己决定是否进行重试，让上游重新发送事件。在开发中也是一个非常有用的操作符，例如它可以用来在网络请求失败时要求其进行重试，重新去进行网络请求。</p>
+<p>下面是一个简单的使用案例：</p>
+<pre><code class="language-java">Observable
+        .create((ObservableOnSubscribe&lt;String&gt;) e -&gt; {
+            e.onNext(&quot;A&quot;);
+            e.onNext(&quot;B&quot;);
+            e.onError(new RuntimeException(&quot;always on error!&quot;));
+            e.onNext(&quot;C&quot;);
+            e.onComplete();
+        })
+        .retryWhen(attempts -&gt; {
+            System.out.println(&quot;retryWhen: apply()&quot;);
+            return attempts.flatMap(throwable -&gt; {
+                System.out.println(&quot;attempts: flatMap apply() -&gt; &quot; + throwable);
+                return Observable.just(&quot;just retry!&quot;);
+            });
+        })
+        .subscribe(new Observer&lt;String&gt;() {
+            @Override
+            public void onSubscribe(Disposable d) {
+                System.out.println(&quot;onSubscribe()&quot;);
+            }
+
+            @Override
+            public void onNext(String s) {
+                System.out.println(&quot;onNext(): &quot; + s);
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                System.out.println(&quot;onError(): &quot; + e);
+            }
+
+            @Override
+            public void onComplete() {
+                System.out.println(&quot;onComplete()&quot;);
+            }
+        });
+</code></pre>
+<p>输出结果如下：</p>
+<pre><code>retryWhen: apply()
+onSubscribe()
+onNext(): A
+onNext(): B
+attempts: flatMap apply() -&gt; java.lang.RuntimeException: always on error!
+onNext(): A
+onNext(): B
+attempts: flatMap apply() -&gt; java.lang.RuntimeException: always on error!
+onNext(): A
+onNext(): B
+attempts: flatMap apply() -&gt; java.lang.RuntimeException: always on error!
+...
+</code></pre>
+<p>如果将以上代码中的：</p>
+<pre><code class="language-java">return Observable.just(&quot;just retry!&quot;);
+</code></pre>
+<p>更改为下面这样：</p>
+<pre><code class="language-java">return Observable.error(new RuntimeException(&quot;shutdown!&quot;))
+</code></pre>
+<p>再看输出结果：</p>
+<pre><code>retryWhen: apply()
+onSubscribe()
+onNext(): A
+onNext(): B
+attempts: flatMap apply()
+onError(): java.lang.RuntimeException: shutdown!
+</code></pre>
+<p>为了下面理解方便，将上面的代码改写成下面 👇 这样，代码逻辑一模一样，只是不使用链式调用并且去掉了 <code>retryWhen</code> 的 lambda 表达式，拆分出上游 <code>upStream</code> 和下游 <code>downStream</code> 的概念：</p>
+<pre><code class="language-java">// 上游
+Observable&lt;String&gt; upStream = Observable.create(e -&gt; {
+    e.onNext(&quot;A&quot;);
+    e.onNext(&quot;B&quot;);
+    e.onError(new RuntimeException(&quot;always on error!&quot;));
+    e.onNext(&quot;C&quot;);
+    e.onComplete();
+});
+
+// 下游
+Observer&lt;String&gt; downStream = new Observer&lt;String&gt;() {
+    @Override
+    public void onSubscribe(Disposable d) {
+        System.out.println(&quot;onSubscribe()&quot;);
+    }
+
+    @Override
+    public void onNext(String s) {
+        System.out.println(&quot;onNext(): &quot; + s);
+    }
+
+    @Override
+    public void onError(Throwable e) {
+        System.out.println(&quot;onError(): &quot; + e);
+    }
+
+    @Override
+    public void onComplete() {
+        System.out.println(&quot;onComplete()&quot;);
+    }
+};
+
+// retryWhen
+upStream.retryWhen(new Function&lt;Observable&lt;Throwable&gt;, ObservableSource&lt;?&gt;&gt;() {
+    @Override
+    public ObservableSource&lt;?&gt; apply(Observable&lt;Throwable&gt; attempts) throws Exception {
+        System.out.println(&quot;retryWhen: apply()&quot;);
+        return attempts.flatMap(throwable -&gt; {
+            System.out.println(&quot;attempts: flatMap apply() -&gt; &quot; + throwable);
+            Thread.sleep(1000);
+            return Observable.just(&quot;just retry&quot;);
+        });
+    }
+}).subscribe(downStream);
+</code></pre>
+<p>以上就是 <code>retryWhen</code> 操作符的基本使用，如果在 <code>retryWhen</code> 中 <code>return</code> 返回的流发射了：</p>
+<ul>
+<li>一个正常事件，即代表重试，会重新发射上游的事件。</li>
+<li>一个错误事件，即代表不想重试，会立即调用下游的 <code>onError()</code> 方法，并且会将这个错误事件中的异常信息作为参数传过去。</li>
+</ul>
+<p>从上面的输出还可以得出一个结论，<code>retryWhen</code> 的 <code>Function</code> 的 <code>apply()</code> 方法<strong>只会被调用一次</strong>，并且是在下游 <code>onSubscribe()</code>  方法之前调用，<strong>并不是在每次上游出错都会去调用</strong>。</p>
+<p>在 <code>retryWhen</code> 的 <code>Function</code> 的 <code>apply()</code> 方法中有一个 <code>Observable&lt;Throwable&gt; attempts</code> 参数，这是一个流，是 <code>retryWhen</code> 操作符内部 ( 准确的是 <code>ObservableRetryWhen</code> 内 ) 的一个流，当上游出错时，虽然 <code>retryWhen</code> 的 <code>Function</code> 的 <code>apply()</code> 方法不会被调用，但是会将每次错误信息从 <code>attempts</code> 中发射出去，所以上游每出现错误时，<code>attempts</code> 就会发射一次，所以我们可以根据 <code>attempts</code> 的错误信息来决定是否重试。</p>
+<p>以上结论会在下面源码分析中得到论证。</p>
+<h3 id="流程分析">流程分析</h3>
+<p>首先看 <code>create()</code> ：</p>
+<pre><code class="language-java">public static &lt;T&gt; Observable&lt;T&gt; create(ObservableOnSubscribe&lt;T&gt; source) {
+    ObjectHelper.requireNonNull(source, &quot;source is null&quot;);
+    return RxJavaPlugins.onAssembly(new ObservableCreate&lt;T&gt;(source));
+}
+</code></pre>
+<p>例子中创建上游时使用的是 <code>create()</code> 操作符，此时流 <code>Observable</code> 的实际类型为 <code>ObservableCreate</code> ，然后经过  <code>retryWhen</code> ：</p>
+<pre><code class="language-java">public final Observable&lt;T&gt; retryWhen(
+    final Function&lt;? super Observable&lt;Throwable&gt;, ? extends ObservableSource&lt;?&gt;&gt; handler) {
+    ObjectHelper.requireNonNull(handler, &quot;handler is null&quot;);
+    return RxJavaPlugins.onAssembly(new ObservableRetryWhen&lt;T&gt;(this, handler));
+}
+</code></pre>
+<p>经过 <code>retryWhen</code> 操作符后，流的类型变为 <code>ObservableRetryWhen</code> ，然后下游订阅上游调用 <code>subscribe()</code> 时，调用的是 <code>ObservableRetryWhen</code> 的 <code>subscribe()</code> 方法，内部会最终调用其 <code>subscribeActual()</code> 方法：</p>
+<pre><code class="language-java">@Override
+protected void subscribeActual(Observer&lt;? super T&gt; observer) {
+  	// 信号源，即上文中提到的 attempts
+    Subject&lt;Throwable&gt; signaller = PublishSubject.&lt;Throwable&gt;create().toSerialized();
+		
+    ObservableSource&lt;?&gt; other;
+
+    try {
+      	// 所以 other 就是我们在 retryWhen 里面返回的那个流，即 Observable.just(&quot;just retry!&quot;)
+        other = ObjectHelper.requireNonNull(handler.apply(signaller), &quot;The handler returned a null ObservableSource&quot;);
+    } catch (Throwable ex) {
+        Exceptions.throwIfFatal(ex);
+        EmptyDisposable.error(ex, observer);
+        return;
+    }
+
+    RepeatWhenObserver&lt;T&gt; parent = new RepeatWhenObserver&lt;T&gt;(observer, signaller, source);
+    observer.onSubscribe(parent);
+
+    other.subscribe(parent.inner);
+
+    parent.subscribeNext();
+}
+</code></pre>
+<h4 id="signaller">signaller</h4>
+<p>在 <code>ObservableRetryWhen</code> 被订阅时首先会创建一个信号源 <code>signaller</code>，即上文中提到的 <code>attempts</code> ，用来发射上游出现的错误。</p>
+<h4 id="other">other</h4>
+<pre><code class="language-java">other = ObjectHelper.requireNonNull(handler.apply(signaller)
+</code></pre>
+<p><code>handler</code> 就是 <code>retryWhen</code> 的参数 <code>Function</code> ，可以看到在调用 <code>Function</code> 的 <code>apply()</code> 函数时将 <code>signaller</code> 作为参数 传过去了，就是刚刚外面提到的 <code>attempts</code> 参数，所以 <code>other</code> 就是 <code>Function</code> 的返回值，即使用 <code>retryWhen</code> 操作符返回的那个流：</p>
+<pre><code class="language-java">Observable.just(&quot;just retry!&quot;)
+</code></pre>
+<h4 id="repeatwhenobserver">RepeatWhenObserver</h4>
+<p><code>RepeatWhenObserver</code> 在 <code>ObservableRetryWhen</code> 内部将原始的上游 <code>source</code> ( <code>upstream</code> ) 以及原始的下游 <code>observer</code> ( <code>downstream</code> ) 封装起来，通过其变量名 <code>parent</code> 也可以看出其代表的意思为 <code>retryWhen</code> 操作符的上游。</p>
+<h4 id="订阅关系">订阅关系</h4>
+<pre><code class="language-java">other.subscribe(parent.inner);
+</code></pre>
+<p><code>parent.inner</code> 即 <code>RepeatWhenObserver</code> 的内部类 <code>InnerRepeatObserver</code> 订阅了我们返回的流。下面会提到，这里只需要知道 <code>parent.inner</code> 订阅了我们返回的 <code>Observable.just(&quot;just retry!&quot;)</code> 即可。</p>
+<pre><code class="language-java">parent.subscribeNext();
+</code></pre>
+<p>再看 <code>RepeatWhenObserver</code> 的 <code>subscribeNext()</code> 方法：</p>
+<pre><code class="language-java">void subscribeNext() {
+    if (wip.getAndIncrement() == 0) {
+
+        do {
+            if (isDisposed()) {
+                return;
+            }
+
+            if (!active) {
+                active = true;
+                source.subscribe(this);
+            }
+        } while (wip.decrementAndGet() != 0);
+    }
+}
+</code></pre>
+<p>内部会让 <code>RepeatWhenObserver</code> 自己订阅我们的原始上游 <code>source</code> ( <code>upstream</code> ) 。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">被观察者</th>
+<th>观察者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong>upstream ( 原始流 )</strong></td>
+<td><strong>RepeatWhenObserver</strong></td>
+</tr>
+<tr>
+<td style="text-align:left"><strong>other ( retryWhen 中我们返回的流 )</strong></td>
+<td><strong>InnerRepeatObserver</strong></td>
+</tr>
+</tbody>
+</table>
+<h4 id="重试机制">重试机制</h4>
+<p>在将重试机制之前，会先分析正常的流程，即上游不会抛出错误不重试的流程，然后再分析错误重试的流程，即上游发射错误事件触发重试的流程。</p>
+<h5 id="正常不重试流程">正常不重试流程</h5>
+<p>还是按照上面的例子，上游 <code>upstream</code> 首先发射 <code>A</code> ，由订阅关系得知会触发 <code>RepeatWhenObserver</code> 的 <code>onNext()</code> 方法：</p>
+<pre><code class="language-java">@Override
+public void onNext(T t) {
+    HalfSerializer.onNext(downstream, t, this, error);
+}
+</code></pre>
+<pre><code class="language-java">public static &lt;T&gt; void onNext(Observer&lt;? super T&gt; observer, T value,
+        AtomicInteger wip, AtomicThrowable error) {
+    if (wip.get() == 0 &amp;&amp; wip.compareAndSet(0, 1)) {
+        observer.onNext(value);
+        ...
+    }
+}
+</code></pre>
+<p>此处的 <code>observer</code> 就是真正的下游 <code>downstream</code>。可以看到内部会调用 <code>downstream</code> 的 <code>onNext()</code> 方法，完成转发操作。</p>
+<h5 id="错误重试流程">错误重试流程</h5>
+<p>按照上面的例子，上游 <code>upstream</code> 模拟出错会发射 <code>RuntimeException(&quot;always on error!&quot;)</code> 事件，由订阅关系得知会触发 <code>RepeatWhenObserver</code> 的 <code>onError()</code> 方法：</p>
+<pre><code class="language-java">@Override
+public void onError(Throwable e) {
+    DisposableHelper.replace(upstream, null);
+    active = false;
+    signaller.onNext(e);
+}
+</code></pre>
+<p>很明显，在这里拿到上游的异常信息后，将异常信息通过 <code>signaller</code> 流发射了出去。<code>signaller</code> 即 <code>retryWhen</code> 参数 <code>Function</code> 中 <code>apply()</code> 方法的参数 <code>attempts</code> 。</p>
+<p>这里先不必探究谁会订阅 <code>signaller</code> 流，我们先看 <code>other</code> 参数，就是我们在 <code>retryWhen</code> 中返回的流，它是被 <code>InnerRepeatObserver</code> 所订阅着的，如果我们返回的流 <code>other</code> 发射了一个正常时间，来看看会怎样，它会触发 <code>InnerRepeatObserver</code> 的 <code>onNext()</code> 方法：</p>
+<pre><code class="language-java">final class InnerRepeatObserver extends AtomicReference&lt;Disposable&gt; implements Observer&lt;Object&gt; {
+
+    private static final long serialVersionUID = 3254781284376480842L;
+
+    @Override
+    public void onSubscribe(Disposable d) {
+        DisposableHelper.setOnce(this, d);
+    }
+
+    @Override
+    public void onNext(Object t) {
+        innerNext();
+    }
+
+    @Override
+    public void onError(Throwable e) {
+        innerError(e);
+    }
+
+    @Override
+    public void onComplete() {
+        innerComplete();
+    }
+}
+</code></pre>
+<p><code>InnerRepeatObserver</code> 是 <code>RepeatWhenObserver</code> 的一个内部类，所以它的 <code>onNext()</code> 中调用的 <code>innerNext()</code> 方法为 <code>RepeatWhenObserver</code> 的：</p>
+<pre><code class="language-java">void innerNext() {
+    subscribeNext();
+}
+</code></pre>
+<p>这样就清楚了，里面又调用 <code>RepeatWhenObserver</code> 的 <code>subscribeNext()</code> 方法，上面已经分析过了，该方法会让 <code>RepeatWhenObserver</code> 自己订阅我们的原始上游 <code>source</code> ( <code>upstream</code> ) 。</p>
+<p>所以我们只要让 <code>other</code> 即我们返回的流发射一次 <code>onNext()</code> 事件即可完成重新订阅达到重试，那怎么触发 <code>other</code> 发射事件呢？答案就是上面的 <code>signaller</code> 。上游出错时，会导致 <code>signaller</code> 将错误信息当成正常时间发射出去，所以我们只要让 <code>signaller</code> 触发 <code>other</code> 即可，可以理解为只要将 <code>other</code> 和 <code>signaller</code> 相连接即可：</p>
+<pre><code class="language-java">upStream.retryWhen(new Function&lt;Observable&lt;Throwable&gt;, ObservableSource&lt;?&gt;&gt;() {
+    @Override
+    public ObservableSource&lt;?&gt; apply(Observable&lt;Throwable&gt; attempts) throws Exception {
+        System.out.println(&quot;retryWhen: apply()&quot;);
+        return attempts.flatMap(throwable -&gt; {
+            System.out.println(&quot;attempts: flatMap apply() -&gt; &quot; + throwable);
+            Thread.sleep(1000);
+            return Observable.just(&quot;just retry&quot;);
+        });
+    }
+}).subscribe(downStream);
+</code></pre>
+<p>在 <code>attempts.flatMap</code> 中，我们还可以拿到 <code>attempts</code> 中的错误信息来判断是否重试，如果重试只要发射一个正常事件即可，向上面的例子一样，那不想重试了呢？只要发射一个 <code>onError()</code> 错误事件即可。由上面 <code>InnerRepeatObserver</code> 源码可以看到如果发射了一个错误事件，会调用 <code>RepeatWhenObserver</code> 的 <code>innerError()</code> 方法：</p>
+<pre><code class="language-java">void innerError(Throwable ex) {
+    DisposableHelper.dispose(upstream);
+    HalfSerializer.onError(downstream, ex, this, error);
+}
+</code></pre>
+<pre><code class="language-java">public static void onError(Observer&lt;?&gt; observer, Throwable ex,
+        AtomicInteger wip, AtomicThrowable error) {
+    if (error.addThrowable(ex)) {
+        if (wip.getAndIncrement() == 0) {
+            observer.onError(error.terminate());
+        }
+    } else {
+        RxJavaPlugins.onError(ex);
+    }
+}
+</code></pre>
+<p>可以看到内部会调用 <code>downstream</code> 的 <code>onError()</code> 方法，完成转发操作。</p>
+<p>至此已经分析完了，下面附上流程图方便理解：</p>
+<blockquote>
+<p>RWO : <code>RepeatWhenObserver</code></p>
+<p>IRO : <code>InnerRepeatObserver</code></p>
+</blockquote>
+<figure data-type="image" tabindex="1"><img src="http://ww3.sinaimg.cn/large/006tNc79ly1g543bldi53j31a80u0jvr.jpg" alt=""></figure>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/java-dynamic-proxy">
+              <h3 class="post-title">
+                下一篇：Java 动态代理及源码简析
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

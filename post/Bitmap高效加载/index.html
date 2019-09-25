@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Bitmap 高效加载 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Bitmap 高效加载</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2016-05-29</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>如何加载一个Bitmap对象？如何高效加载一个Bitmap对象？</p>
+<!--more-->
+<h3 id="如何加载一个bitmap对象">如何加载一个Bitmap对象？</h3>
+<p>BitmapFactory提供了四类方法：decodeFile、decodeResource、decodeStream和decodeByteArray，分别用于支持从文件系统、资源、输入流以及字节数组中加载一个Bitmap对象，其中decodeFile和decodeResource又间接调用了decodeStream方法，这四类方法最终是在Android的底层实现的，对应着BitmapFactory类的几个native方法。</p>
+<h3 id="如何高效加载一个bitmap对象">如何高效加载一个Bitmap对象？</h3>
+<ul>
+<li>核心是通过BitmapFactory.Options来加载所需尺寸的图片，通过BitmapFactory.Options就可以很方便地对一个图片进行采样缩放</li>
+</ul>
+<pre><code class="language-java">    public Bitmap decodeSampledBitmapFromResource(Resources res, int resId, int reqWidth, int reqHeight) {
+        // 首先将inJustDecodeBounds置为true来检查尺寸(而不真正加载图片)
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeResource(res, resId, options);
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+        // 将inJustDecodeBounds置为false去加载图片
+        options.inJustDecodeBounds = false;
+        return BitmapFactory.decodeResource(res, resId, options);
+    }
+</code></pre>
+<pre><code class="language-java">    public Bitmap decodeSampledBitmapFromFileDescriptor(FileDescriptor fd, int reqWidth, int reqHeight) {
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFileDescriptor(fd, null, options);
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+        // 将inJustDecodeBounds置为false去加载图片
+        options.inJustDecodeBounds = false;
+        return BitmapFactory.decodeFileDescriptor(fd, null, options);
+    }
+</code></pre>
+<pre><code class="language-java">    private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+        if (reqWidth == 0 || reqHeight == 0) {
+            return 1;
+        }
+        // 获取图片的原始宽高信息
+        int rawWidth = options.outWidth;
+        int rawHeight = options.outHeight;
+        int inSampleSize = 1;
+        if (rawWidth &gt; reqWidth || rawHeight &gt; reqHeight) {
+            int halfWidth = rawWidth / 2;
+            int halfHeight = rawHeight / 2;
+            while ((halfWidth / inSampleSize) &gt;= reqWidth &amp;&amp; (halfHeight / inSampleSize) &gt;= reqHeight) {
+                // inSampleSize应为2的指数，例如inSampleSize为2，代表宽高均为原来的1/2
+                inSampleSize *= 2;
+            }
+        }
+        return inSampleSize;
+    }
+</code></pre>
+<p>使用：</p>
+<pre><code class="language-java">// 这里只列举了decodeSampledBitmapFromResource和decodeSampledBitmapFromFileDescriptor，其他类似
+mImageView.setBitmapBitmap(decodeSampledBitmapFromResource(getResource(),R.id.img,100,100));
+</code></pre>
+<h3 id="参考">参考：</h3>
+<blockquote>
+<p>《Android开发艺术探索》</p>
+</blockquote>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/使用Notification的BigTextStyle时需要注意的地方">
+              <h3 class="post-title">
+                下一篇：使用 Notification 的 BigTextStyle 时需要注意的地方
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

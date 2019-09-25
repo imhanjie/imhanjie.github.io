@@ -1,0 +1,229 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>主题皮肤切换的简单实现 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">主题皮肤切换的简单实现</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2016-06-07</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>一个简单的皮肤切换实现</p>
+<!--more-->
+<p>先上效果图：</p>
+<figure data-type="image" tabindex="1"><img src="https://github.com/melodyxxx/Images/raw/master/Other/switch_skin.gif" alt=""></figure>
+<p>中间的选择皮肤的Dialog由于录制gif的时候帧被过滤掉了，下面Dialog截图：</p>
+<figure data-type="image" tabindex="2"><img src="https://github.com/melodyxxx/Images/raw/master/Other/skin_select.jpg" alt=""></figure>
+<h2 id="实现步骤">实现步骤</h2>
+<h3 id="一-在stylesxml中定义style皮肤颜色样式">一、在styles.xml中定义style皮肤颜色样式</h3>
+<p>当然在定义前需要在colors.xml中准备好各种皮肤的颜色，下面是一些Material Design中的颜色值：</p>
+<pre><code class="language-xml">    &lt;color name=&quot;material_blue&quot;&gt;#2196F3&lt;/color&gt;
+    &lt;color name=&quot;material_light_blue&quot;&gt;#03A9F4&lt;/color&gt;
+    &lt;color name=&quot;material_pink&quot;&gt;#E91E63&lt;/color&gt;
+    &lt;color name=&quot;material_red&quot;&gt;#F44336&lt;/color&gt;
+    &lt;color name=&quot;material_purple&quot;&gt;#9C27B0&lt;/color&gt;
+    &lt;color name=&quot;material_deep_purple&quot;&gt;#673AB7&lt;/color&gt;
+    &lt;color name=&quot;material_teal&quot;&gt;#009688&lt;/color&gt;
+    &lt;color name=&quot;material_deep_orange&quot;&gt;#FF5722&lt;/color&gt;
+    &lt;color name=&quot;material_green&quot;&gt;#4CAF50&lt;/color&gt;
+    &lt;color name=&quot;material_cyan&quot;&gt;#00BCD4&lt;/color&gt;
+    &lt;color name=&quot;material_orange&quot;&gt;#FF9800&lt;/color&gt;
+    &lt;color name=&quot;material_indigo&quot;&gt;#3F51B5&lt;/color&gt;
+    &lt;color name=&quot;material_brown&quot;&gt;#795548&lt;/color&gt;
+    &lt;color name=&quot;material_blue_gray&quot;&gt;#607D8B&lt;/color&gt;
+    &lt;color name=&quot;material_amber&quot;&gt;#FFC107&lt;/color&gt;
+    &lt;color name=&quot;settings_item_title&quot;&gt;#BB000000&lt;/color&gt;
+    &lt;color name=&quot;settings_item_desc&quot;&gt;#55000000&lt;/color&gt;
+    &lt;color name=&quot;dialog_text_color&quot;&gt;#99000000&lt;/color&gt;
+</code></pre>
+<p>然后在styles.xml中定义style皮肤颜色样式：</p>
+<pre><code class="language-xml">    &lt;style name=&quot;AppTheme.Light.Blue&quot; parent=&quot;Base.AppTheme&quot;&gt;
+        &lt;item name=&quot;colorPrimary&quot;&gt;@color/material_light_blue&lt;/item&gt;
+        &lt;item name=&quot;colorPrimaryDark&quot;&gt;@color/material_light_blue&lt;/item&gt;
+        &lt;item name=&quot;colorAccent&quot;&gt;@color/material_light_blue&lt;/item&gt;
+    &lt;/style&gt;
+
+    &lt;style name=&quot;AppTheme.Pink&quot; parent=&quot;Base.AppTheme&quot;&gt;
+        &lt;item name=&quot;colorPrimary&quot;&gt;@color/material_pink&lt;/item&gt;
+        &lt;item name=&quot;colorPrimaryDark&quot;&gt;@color/material_pink&lt;/item&gt;
+        &lt;item name=&quot;colorAccent&quot;&gt;@color/material_pink&lt;/item&gt;
+    &lt;/style&gt;
+
+    &lt;style name=&quot;AppTheme.Red&quot; parent=&quot;Base.AppTheme&quot;&gt;
+        &lt;item name=&quot;colorPrimary&quot;&gt;@color/material_red&lt;/item&gt;
+        &lt;item name=&quot;colorPrimaryDark&quot;&gt;@color/material_red&lt;/item&gt;
+        &lt;item name=&quot;colorAccent&quot;&gt;@color/material_red&lt;/item&gt;
+    &lt;/style&gt;
+
+    &lt;style name=&quot;AppTheme.Purple&quot; parent=&quot;Base.AppTheme&quot;&gt;
+        &lt;item name=&quot;colorPrimary&quot;&gt;@color/material_purple&lt;/item&gt;
+        &lt;item name=&quot;colorPrimaryDark&quot;&gt;@color/material_purple&lt;/item&gt;
+        &lt;item name=&quot;colorAccent&quot;&gt;@color/material_purple&lt;/item&gt;
+    &lt;/style&gt;
+</code></pre>
+<p>这里就列举了4款皮肤style文件，由于Activity都是继承自AppCompatActivity，所以这里通过修改colorPrimary、colorPrimaryDark、colorAccent来达到换肤的目的。</p>
+<h3 id="二-在baseactivity中通过settheme来应用皮肤对应的style">二、在BaseActivity中通过setTheme()来应用皮肤对应的style</h3>
+<pre><code class="language-java">    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setTheme(R.style.xxx);
+		// 只要在setContentView之前setTheme即可
+    }
+</code></pre>
+<h3 id="三-如何让textview或者imageview跟随皮肤颜色设置">三、如何让TextView或者ImageView跟随皮肤颜色设置？</h3>
+<p>对于TextView只需要在xml中动态引用下当前style的colorPrimary/colorPrimaryDark/colorAccent即可（这里引用的是colorPrimary）：</p>
+<pre><code class="language-xml">    &lt;TextView
+        android:layout_width=&quot;wrap_content&quot;
+        android:layout_height=&quot;wrap_content&quot;
+        android:textColor=&quot;?attr/colorPrimary&quot;/&gt;
+</code></pre>
+<p>ImageView和TextView一样：</p>
+<pre><code class="language-xml">    &lt;ImageView
+        android:layout_width=&quot;23dp&quot;
+        android:layout_height=&quot;23dp&quot;
+        android:src=&quot;@drawable/ic_rectangle&quot;
+        android:tint=&quot;?attr/colorPrimary&quot;/&gt;
+</code></pre>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/Bitmap高效加载">
+              <h3 class="post-title">
+                下一篇：Bitmap 高效加载
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

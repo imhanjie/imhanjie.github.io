@@ -1,0 +1,359 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>使用 RenderScript 实现毛玻璃模糊效果 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">使用 RenderScript 实现毛玻璃模糊效果</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2016-10-09</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>利用 RenderScript 高效的实现毛玻璃模糊效果</p>
+<!--more-->
+<blockquote>
+<ul>
+<li>文章来源：itsCoder 的 <a href="https://github.com/itsCoder/weeklyblog">WeeklyBolg</a> 项目</li>
+<li>itsCoder主页：<a href="http://itscoder.com/">http://itscoder.com/</a></li>
+<li>作者：<a href="http://melodyxxx.com/">Melodyxxx</a></li>
+<li>审阅者：<a href="https://github.com/Hymanme">Hymanme</a></li>
+</ul>
+</blockquote>
+<h2 id="renderscript-介绍">RenderScript 介绍</h2>
+<p>在开始之前，先看下 RenderScript 的<a href="https://developer.android.com/guide/topics/renderscript/compute.html">官方介绍</a>：</p>
+<blockquote>
+<p>RenderScript is a framework for running computationally intensive tasks at high performance on Android. RenderScript is primarily oriented for use with data-parallel computation, although serial workloads can benefit as well. The RenderScript runtime parallelizes work across processors available on a device, such as multi-core CPUs and GPUs. This allows you to focus on expressing algorithms rather than scheduling work. RenderScript is especially useful for applications performing image processing, computational photography, or computer vision.</p>
+</blockquote>
+<p>大致意思就是说 RenderScript 是 Android 平台上为了计算密集型任务的一中高性能框架，并且RenderScript 尤其对图像的处理特别有用。另外，RenderScript 之所以效率高是因为其底层是 C 实现的。</p>
+<h2 id="使用-renderscript-support-library">使用 RenderScript Support Library</h2>
+<p>为了可以兼容到更早的版本，我们直接使用 android.support.v8.renderscript(支持API level 9+)包下的，而不使用android.renderscript(支持API level 11+)</p>
+<p>以 Android Studio 为例，打开你的 app 的 build.gradle 文件，在 android 的 defaultConfig 结点添加两句：</p>
+<pre><code>renderscriptTargetApi 18
+renderscriptSupportModeEnabled true
+</code></pre>
+<blockquote>
+<p>其中 renderscriptTargetApi 的值官方说的是从 11 到最新的 API Level 都可以</p>
+</blockquote>
+<p>这样我们等下导包就可以导 v8 内的了。</p>
+<h2 id="模糊背景">模糊背景</h2>
+<h3 id="局部模糊">局部模糊</h3>
+<p>先上一张我们要实现的效果图：</p>
+<figure data-type="image" tabindex="1"><img src="http://ww2.sinaimg.cn/large/df189f43gw1f8m3hvioi5j209c0gcwfm.jpg" alt=""></figure>
+<p>这里可以看到实现的是局部模糊，在图片的正中间有一个 TextView，TextView 的背景部分做了模糊处理。</p>
+<p>先大致说下模糊的主要步骤(完全模糊步骤一样)：</p>
+<ul>
+<li>首先取出 TextView 在 ImageView 正上方处的那一块背景</li>
+<li>然后对取出的那一块背景做模糊处理</li>
+<li>最后把模糊处理后的背景再设为 TextView 的背景</li>
+</ul>
+<p>这样，就可以达到我们图片中的局部模糊效果，具体的过程在代码中有详细的注释。</p>
+<p>下面先贴上布局文件：</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;RelativeLayout
+    xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+    android:layout_width=&quot;match_parent&quot;
+    android:layout_height=&quot;match_parent&quot;
+    android:padding=&quot;20dp&quot;&gt;
+
+    &lt;FrameLayout
+        android:layout_width=&quot;300dp&quot;
+        android:layout_height=&quot;300dp&quot;
+        android:layout_centerInParent=&quot;true&quot;&gt;
+
+        &lt;ImageView
+            android:id=&quot;@+id/image&quot;
+            android:layout_width=&quot;match_parent&quot;
+            android:layout_height=&quot;match_parent&quot;
+            android:scaleType=&quot;centerCrop&quot;
+            android:src=&quot;@drawable/img&quot;/&gt;
+
+        &lt;TextView
+            android:id=&quot;@+id/text&quot;
+            android:layout_width=&quot;wrap_content&quot;
+            android:layout_height=&quot;wrap_content&quot;
+            android:layout_gravity=&quot;center&quot;
+            android:text=&quot;Melody&quot;
+            android:textColor=&quot;@android:color/white&quot;
+            android:textSize=&quot;45sp&quot;/&gt;
+
+    &lt;/FrameLayout&gt;
+
+&lt;/RelativeLayout&gt;
+</code></pre>
+<p>再贴上java代码：</p>
+<pre><code class="language-java">public class MainActivity extends Activity implements Runnable {
+
+    private static final String TAG = &quot;MainActivity&quot;;
+
+    private ImageView mImage;
+    private TextView mText;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        mImage = (ImageView) findViewById(R.id.image);
+        mText = (TextView) findViewById(R.id.text);
+        // onCreate()内无法到ImageView的背景，所以需要 post 到消息队列内稍后执行
+        mImage.post(this);
+    }
+
+    @Override
+    public void run() {
+        blur(getImageViewBitmap(mImage), mText);
+    }
+
+    /**
+     * 取出一个imageView的bitmap背景
+     */
+    public Bitmap getImageViewBitmap(ImageView imageView) {
+        imageView.setDrawingCacheEnabled(true);
+        // 取出ImageView的Bitmap
+        Bitmap bitmap = imageView.getDrawingCache();
+        // 拷贝一份bitmap用作模糊
+        Bitmap bitmapCopy = bitmap.copy(bitmap.getConfig(), true);
+        imageView.setDrawingCacheEnabled(false);
+        return bitmapCopy;
+    }
+
+    /**
+     * 模糊的具体实现
+     *
+     * @param inputBitmap 要模糊的 bitmap
+     * @param targetView  需要被模糊背景的 View
+     */
+    public void blur(Bitmap inputBitmap, View targetView) {
+        // 创建一个和目标View(需要背景被模糊的View)宽高一样的空的 outputBitmap
+        Bitmap outputBitmap = Bitmap.createBitmap((int) (targetView.getMeasuredWidth()),
+                (int) (targetView.getMeasuredHeight()), Bitmap.Config.ARGB_8888);
+        // 将 outputBitmap 关联在 canvas 上
+        Canvas canvas = new Canvas(outputBitmap);
+        // 画布移动到目标 View 在父布局中的位置
+        canvas.translate(-targetView.getLeft(), -targetView.getTop());
+        Paint paint = new Paint();
+        paint.setFlags(Paint.FILTER_BITMAP_FLAG);
+        // 将要模糊的 inputBitmap 绘制到 outputBitmap 上
+        // 因为刚才做了 translate 操作，这样就可以裁剪到目标 View 在父布局内的那一块背景到 outputBitmap 上
+        canvas.drawBitmap(inputBitmap, 0, 0, paint);
+
+        // ----接下来做模糊 outputBitmap 处理操作----
+
+        // 创建 RenderScript
+        RenderScript rs = RenderScript.create(this);
+        Allocation input = Allocation.createFromBitmap(rs, outputBitmap);
+        Allocation output = Allocation.createTyped(rs, input.getType());
+        // 使用 ScriptIntrinsicBlur 类来模糊图片
+        ScriptIntrinsicBlur blur = ScriptIntrinsicBlur.create(
+                rs, Element.U8_4(rs));
+        // 设置模糊半径 ( 取值范围为( 0.0f , 25f ] ，半径越大，模糊效果也越大)
+        blur.setRadius(25f);
+        blur.setInput(input);
+        // 模糊计算
+        blur.forEach(output);
+        // 模糊 outputBitmap
+        output.copyTo(outputBitmap);
+        // 将模糊后的 outputBitmap 设为目标 View 的背景
+        targetView.setBackground(new BitmapDrawable(getResources(), outputBitmap));
+        rs.destroy()；
+    }
+
+}
+</code></pre>
+<p>导的是 v8 的包：</p>
+<pre><code class="language-java">import android.support.v8.renderscript.Allocation;
+import android.support.v8.renderscript.Element;
+import android.support.v8.renderscript.RenderScript;
+import android.support.v8.renderscript.ScriptIntrinsicBlur;
+</code></pre>
+<h3 id="完全模糊">完全模糊</h3>
+<p>上面是局部模糊，然后我们改变一下 TextView 的宽高铺满父布局，使其和 ImageView 大小一样来实现完全模糊效果：</p>
+<pre><code class="language-xml">...
+&lt;TextView
+    android:id=&quot;@+id/text&quot;
+    android:layout_width=&quot;match_parent&quot;
+    android:layout_height=&quot;match_parent&quot;
+    android:gravity=&quot;center&quot;
+    android:text=&quot;Melody&quot;
+    android:textColor=&quot;@android:color/white&quot;
+    android:textSize=&quot;45sp&quot;/&gt;
+...
+</code></pre>
+<p>java代码部分不需要改变，下面再看效果图：</p>
+<figure data-type="image" tabindex="2"><img src="http://ww3.sinaimg.cn/large/df189f43gw1f8m432a1d2j20970g50tf.jpg" alt=""></figure>
+<h3 id="效率如何">效率如何？</h3>
+<p>为了查看操作耗时，我使用 Log 在 blur() 方法的开头和结束地方分别计算了时间，然后查看时间差：</p>
+<pre><code>10-09 17:04:23.664 23665-23665/com.melodyxxx.blurdemo2 E/MainActivity: spend: 120ms
+</code></pre>
+<p>可以看到居然花了 120ms，显然效率不够高，有没有优化的方法？(测试机型为 魅族 PRO 6)</p>
+<h2 id="效率优化">效率优化</h2>
+<p>上面的是直接将原 ImageView 的 bitmap 直接模糊处理，效率不够高，所以我们可以先将原图片进行压缩处理，然后在进行模糊，下面为关键代码，scaleFactor 为压缩比例大小，例如 scaleFactor 为 2，代表先将原图压缩为原来的 1/2，然后进行模糊，效率会高很多。</p>
+<pre><code class="language-java">...
+Bitmap outputBitmap = Bitmap.createBitmap((int) (mTargetView.getMeasuredWidth() / scaleFactor),
+        (int) (mTargetView.getMeasuredHeight() / scaleFactor), Bitmap.Config.ARGB_8888);
+Canvas canvas = new Canvas(outputBitmap);
+canvas.translate(-mTargetView.getLeft() / scaleFactor, -mTargetView.getTop() / scaleFactor);
+canvas.scale(1 / scaleFactor, 1 / scaleFactor);
+Paint paint = new Paint();
+paint.setFlags(Paint.FILTER_BITMAP_FLAG);
+canvas.drawBitmap(mInputBitmap, 0, 0, paint);
+...
+</code></pre>
+<p>具体可以看我的 Demo ：<a href="https://github.com/melodyxxx/BlurDemo">BlurDemo</a></p>
+<p>下面是 Demo 效果图：</p>
+<figure data-type="image" tabindex="3"><img src="http://ww1.sinaimg.cn/large/df189f43gw1f8m5natyw0g209c0gb7wl.gif" alt=""></figure>
+<p>结果：<br>
+压缩比例为 2 时：耗时 19 ms<br>
+压缩比例为 8 时：耗时 2 ms</p>
+<p>根据压缩比例配合不同的模糊半径可以达到不同模糊效果。</p>
+<p>再来看 Demo 效果图中拖动 SeekBar 可以动态的实现模糊效果，首先想到的方法是每次拖动时实时计算模糊，这样的效率肯定不行，还会造成卡顿，我这里的方法是先将图片最大化模糊一次设给上方 ImageView 的背景即可，然后 SeekBar 拖动时，只需要改变最上方或者下方图片的透明度就可以达到上面的效果。</p>
+<p>Demo apk 下载：http://fir.im/snmb<br>
+Demo 地址：https://github.com/melodyxxx/BlurDemo</p>
+<h2 id="总结">总结</h2>
+<p>除了 RenderScript 以外还有一些其他的方法也可以实现高斯模糊，例如 FastBlur 等，在模糊的时候不要将原图直接模糊处理，可采取先缩放然后再模糊，这样可以大大提高模糊的速度。</p>
+<blockquote>
+<p>参考资料：<br>
+https://developer.android.com/guide/topics/renderscript/compute.html<br>
+http://mobile.51cto.com/aprogram-434699.htm</p>
+</blockquote>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/broadcast-receiver-analysis">
+              <h3 class="post-title">
+                下一篇：BroadcastReceiver 的工作过程分析
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

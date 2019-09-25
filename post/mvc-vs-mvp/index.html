@@ -1,0 +1,194 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>MVC 模式与 MVP 模式的一些思考 | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">MVC 模式与 MVP 模式的一些思考</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2017-08-06</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <h2 id="mvc-vs-mvp">MVC vs MVP</h2>
+<p>MVP 一种由传统的 MVC 模式演变而来开发模式。MVC 和 MVP 都有一个共同的地方，就是 Model (M) 负责数据的存取，View (V) 负责界面的显示，Controller (C) 与 Presenter (P) 负责业务逻辑的处理。但是两者最大的不同点就是 View 与 Model 之间的交互方式，在 MVC 中 V，View 允许去直接访问 Model，而在 MVP 中是不可以的，View 与 Model 之间的交互完全由 Presenter 来负责。</p>
+<!--more-->
+<h2 id="android-中的-mvc">Android 中的 MVC</h2>
+<p>在 Android 中，Controller 的职责落在了 Activity 中，而 Activity 负责加载 XML 中的布局显示在界面上，对 View 中的控件的访问也在 Activity 中完成，所以 Activity 变得 “很重”，遇到复杂的界面时，代码量动辄成百上千行，隔段时间再去维护该块代码时，那种痛，可想而知~</p>
+<h2 id="mvp-在-android-中的应用">MVP 在 Android 中的应用</h2>
+<ol>
+<li>Activity V 层只负责界面的显示，业务逻辑交给 P 层处理，P 与 V 直接通过接口通信。</li>
+<li>P 层收到 V 层的交互请求，负责调用 M 层来处理数据，处理完后通知 V 层更新界面。</li>
+<li>P 层与 M 层也通过接口进行通信，P 层处于 V 与 M 之间的中介，负责调度 V 与 M。</li>
+</ol>
+<p>MVP 模式的优点：</p>
+<ul>
+<li>
+<p>实现 View 与 Model 的解耦</p>
+<p>View 与 Model 之间的通信需要通过 Presenter 来完成，修改界面不影响模型，修改模型不影响界面。</p>
+</li>
+<li>
+<p>逻辑更清晰，易于维护</p>
+<p>使用 MVP 后，View 只负责界面的显示，看起来非常干净，不至于过两天再来看就成了 “别人的代码”</p>
+</li>
+<li>
+<p>P 层与 M 层复用</p>
+<p>如果项目中有类似的界面，可以直接复用 Presenter 或者 Model 层</p>
+</li>
+<li>
+<p>适合多人协同开发</p>
+<p>如果一个页面太复杂可以实现多人共同开发，开发之前事先定义好 V 与 P、P 与 V 之间的接口（接口后期根据开发来修改），然后可以让一个人负责界面，另一个人负责业务逻辑，之间使用接口进行通信。</p>
+</li>
+<li>
+<p>单元测试</p>
+<p>可不依托于界面来单独进行业务逻辑的测试</p>
+</li>
+</ul>
+<p>MVP 模式的缺点：</p>
+<ul>
+<li>代码量变多，需要定义很多接口，类文件增多</li>
+<li>需要控制好一些特殊对象的生命周期，防止内存泄漏的问题</li>
+</ul>
+<h2 id="总结">总结</h2>
+<p>MVP 模式没有正确的写法，MVP 只是一个思想，根据需求适合自己项目才是正确的。页面逻辑越复杂，MVP 的优势越明显，所以如果遇到简单的界面，可以不使用 MVP。</p>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/android_handler_summary">
+              <h3 class="post-title">
+                下一篇：Android 消息循环机制总结
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>

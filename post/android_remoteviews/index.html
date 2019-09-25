@@ -1,0 +1,352 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    
+<meta charset="utf-8" >
+
+<title>Android RemoteViews | Melody</title>
+<meta name="description" content="Keep Alive.">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://imhanjie.github.io//favicon.ico?v=1569399019999">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+<link rel="stylesheet" href="https://imhanjie.github.io//styles/main.css">
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+  </head>
+  <body>
+    <div id="app" class="main">
+      <div class="site-header-container">
+  <div class="site-header">
+    <div class="left">
+      <a href="https://imhanjie.github.io/">
+        <img class="avatar" src="https://imhanjie.github.io//images/avatar.png?v=1569399019999" alt="" width="32px" height="32px">
+      </a>
+      <a href="https://imhanjie.github.io/">
+        <h1 class="site-title">Melody</h1>
+      </a>
+    </div>
+    <div class="right">
+      <transition name="fade">
+        <i class="icon" :class="{ 'icon-close-outline': menuVisible, 'icon-menu-outline': !menuVisible }" @click="menuVisible = !menuVisible"></i>
+      </transition>
+    </div>
+  </div>
+</div>
+
+<transition name="fade">
+  <div class="menu-container" style="display: none;" v-show="menuVisible">
+    <div class="menu-list">
+      
+        
+          <a href="/" class="menu purple-link">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="menu purple-link">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="menu purple-link">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="menu purple-link">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+</transition>
+
+
+      <div class="content-container">
+        <div class="post-detail">
+          
+          <h2 class="post-title">Android RemoteViews</h2>
+          <div class="post-info post-detail-info">
+            <span><i class="icon-calendar-outline"></i> 2018-10-24</span>
+            
+              <span>
+                <i class="icon-pricetags-outline"></i>
+                
+                  <a href="https://imhanjie.github.io//tag/android">
+                    Android
+                    
+                  </a>
+                
+              </span>
+            
+          </div>
+          <div class="post-content">
+            <p>RemoteVies在自定义通知栏布局和桌面Widget的开发中扮演着重要的角色。</p>
+<!--more-->
+<p>RemoteViews 顾名思义，远程 View，RemoteViews 表示的是一个 View 结构，他可以在其他进程中显示，由于他在其他进程中显示，为了能够更新它的界面。RemoteViews 提供了一组基础的操作用于跨进程更新它的界面。自定义通知栏布局和桌面Widget更新界面时无法像 Activity 里面那样去直接更新 View，这是因为他们的界面运行在其他进程中，确切来说是系统的 SystemServer 进程。为了提供更新界面，RemoteViews 提供了一系列的 set 方法。</p>
+<p>最常用的构造方法：</p>
+<pre><code class="language-java">public RemoteViews(String packageName , int layoutId)
+</code></pre>
+<p>第一个参数是包名，第二个参数是布局文件的资源id;</p>
+<p><strong>注意：RemoteView 并不支持所有的 View，只支持部分 View ( 因为更新 UI 是通过多进程的，所以出于性能考虑)</strong></p>
+<ul>
+<li>下面列举了一些常用的 set 方法：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>方法名</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>setTextViewText(int viewId, CharSequence text)</td>
+<td>设置 TextView 的文本</td>
+</tr>
+<tr>
+<td>setTextViewTextSize(int viewId, int units, float size)</td>
+<td>设置 TextView 的字体大小</td>
+</tr>
+<tr>
+<td>setTextColor(int viewId, int color)</td>
+<td>设置 TextView 的字体颜色</td>
+</tr>
+<tr>
+<td>setImageViewResource(int viewId, int srcId)</td>
+<td>设置 ImageView 的图片资源</td>
+</tr>
+<tr>
+<td>setInt(int viewId, String methodName, int value)</td>
+<td>反射调用 View 对象的参数类型为 int 的方法</td>
+</tr>
+<tr>
+<td>setLong(int viewId, String methodName, long value)</td>
+<td>反射调用 View 对象的参数类型为 long 的方法</td>
+</tr>
+<tr>
+<td>setBoolean(int viewId, String methodName, boolean value)</td>
+<td>反射调用 View 对象的参数类型为 boolean 的方法</td>
+</tr>
+<tr>
+<td>setOnClickPendingIntent(int viewId, PendingIntent pendingIntent)</td>
+<td>为 View 添加单击事件，事件类型只能为PendingIntent</td>
+</tr>
+</tbody>
+</table>
+<h3 id="remoteview-的内部机制">RemoteView 的内部机制</h3>
+<ul>
+<li>首先 RemoteViews 会通过 **Binder **传递到 SystemSever 进程，这是因为 RemoteViews 实现了 Parcelable 接口，因此可以跨进程传输</li>
+<li>系统会根据 RemoteViews 中的包名等信息去得到该应用的资源。</li>
+<li>通过 LayoutInflater 去加载 RemoteViews 中的布局文件。</li>
+<li>接着系统会对 View 执行一系列界面更新任务，这些任务就是之前我们通过 set 方法来<strong>提交</strong>的。set 方法对View 的操作不是立刻执行的，在 RemoteViews 内部会记录所有的更新操作，等到 RemoteViews 被加载以后才能执行。</li>
+</ul>
+<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/YNbpXgK.png" alt=""></figure>
+<p>理论上，系统完全可以通过 Binder 去支持所有的 View 和 View 操作，但这样做代价太大，因为 View 的方法太多了，另外就是大量的 IPC 操作会影响效率。为了解决这个问题，<strong>系统并没有通过 Binder 去直接支持 View 的跨进程访问，而是提供了一个 Action 的概念，Action 代表一个 View 的操作，Action 同样实现了 Parcelable 接口。系统首先将 View 操作封装到 Action 对象并将这些对象跨进程传输到远程进程，接着远程进程中执行 Action 对象中的具体操作。</strong></p>
+<p>例如看 setTextViewText 方法的实现：</p>
+<pre><code class="language-java">public void setTextViewText(int viewId, CharSequence text) {
+    setCharSequence(viewId, &quot;setText&quot;, text);
+}
+</code></pre>
+<pre><code class="language-java">public void setCharSequence(int viewId, String methodName, CharSequence value) {
+    addAction(new ReflectionAction(viewId, methodName, ReflectionAction.CHAR_SEQUENCE, value));
+}
+</code></pre>
+<pre><code class="language-java">private void addAction(Action a) {
+
+	...   
+
+    if (mActions == null) {
+        mActions = new ArrayList&lt;Action&gt;();
+    }
+    mActions.add(a);
+
+    ...
+}
+</code></pre>
+<p>可以看到 RemoteViews 内部有个 mActions 成员，用于存储每次 set 的 Action 的操作。</p>
+<pre><code class="language-java">public View apply(Context context, ViewGroup parent, OnClickHandler handler) {
+    RemoteViews rvToApply = getRemoteViewsToApply(context);
+
+    View result;
+    
+	...
+
+    LayoutInflater inflater = (LayoutInflater)
+            context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+    // Clone inflater so we load resources from correct context and
+    // we don't add a filter to the static version returned by getSystemService.
+    inflater = inflater.cloneInContext(inflationContext);
+    inflater.setFilter(this);
+    result = inflater.inflate(rvToApply.getLayoutId(), parent, false);
+
+    rvToApply.performApply(result, parent, handler);
+
+    return result;
+}
+</code></pre>
+<pre><code class="language-java">private void performApply(View v, ViewGroup parent, OnClickHandler handler) {
+    if (mActions != null) {
+        handler = handler == null ? DEFAULT_ON_CLICK_HANDLER : handler;
+        final int count = mActions.size();
+        for (int i = 0; i &lt; count; i++) {
+            Action a = mActions.get(i);
+            a.apply(v, parent, handler);
+        }
+    }
+}
+</code></pre>
+<p>RemoteViews 的 apply 方法是来进行 View 的更新操作的。可以看到，RemoteViews 的 apply 方法内部会遍历调用所有 Action 对象的 apply 方法，具体的 View 更新操作是由 Action 对象的 apply 方法来完成的。<br>
+至于 apply 是怎么被调用的，例如当我们在小部件开发中调用 AppWidgetManager 或者通知栏的NotificationManager 的 notify 方法，他们的确是通过 RemoteViews 的 apply 以及 reapply 方法来加载或者更新界面的。</p>
+<p>apply 和 reapply 的区别在于：</p>
+<ul>
+<li>apply 会加载布局并更新界面。</li>
+<li>reApply 则只会更新界面。</li>
+</ul>
+<p>通知栏和桌面小插件在初始化界面时会调用 apply 方法，而在后续的更新界面时则会调用 reapply 方法。</p>
+<p>下面看一些 Action 的子类的具体实现：</p>
+<ul>
+<li>ReflectionAction</li>
+</ul>
+<pre><code class="language-java">private final class ReflectionAction extends Action {
+
+	...
+
+    ReflectionAction(int viewId, String methodName, int type, Object value) {
+        this.viewId = viewId;
+        this.methodName = methodName;
+        this.type = type;
+        this.value = value;
+    }
+
+	...
+
+    @Override
+    public void apply(View root, ViewGroup rootParent, OnClickHandler handler) {
+        final View view = root.findViewById(viewId);
+        if (view == null) return;
+
+        Class&lt;?&gt; param = getParameterType();
+        if (param == null) {
+            throw new ActionException(&quot;bad type: &quot; + this.type);
+        }
+
+        try {
+            getMethod(view, this.methodName, param).invoke(view, wrapArg(this.value));
+        } catch (ActionException e) {
+            throw e;
+        } catch (Exception ex) {
+            throw new ActionException(ex);
+        }
+    }
+	
+	...
+
+}
+</code></pre>
+<p>ReflectionAction 表示的是一个反射动作。使用 ReflectionAction 的 set 方法有：setTextViewText、setBoolean、setLong、setDouble等等。</p>
+<p>除了 ReflectionAction 还有其他的 Action，下面来看看 TextViewSizeAction：</p>
+<ul>
+<li>TextViewSizeAction</li>
+</ul>
+<pre><code class="language-java">private class TextViewSizeAction extends Action {
+    public TextViewSizeAction(int viewId, int units, float size) {
+        this.viewId = viewId;
+        this.units = units;
+        this.size = size;
+    }
+
+	...
+
+    @Override
+    public void apply(View root, ViewGroup rootParent, OnClickHandler handler) {
+        final TextView target = (TextView) root.findViewById(viewId);
+        if (target == null) return;
+        target.setTextSize(units, size);
+    }
+
+    public String getActionName() {
+        return &quot;TextViewSizeAction&quot;;
+    }
+
+    int units;
+    float size;
+
+    public final static int TAG = 13;
+}
+</code></pre>
+<p>TextViewSizeAction 的实现比较简单，他之所以不用反射来实现，是因为 setTextSize 这个方法有2个参数，因此无法复用 ReflectionAction，因为 ReflectionAction 反射调用只有一个参数。</p>
+<blockquote>
+<p>文章整理自「Android开发艺术探索」</p>
+</blockquote>
+
+          </div>
+        </div>
+
+        
+          <div class="next-post">
+            <a class="purple-link" href="https://imhanjie.github.io//post/MongoDB-常用命令总结">
+              <h3 class="post-title">
+                下一篇：MongoDB 常用命令总结
+              </h3>
+            </a>
+          </div>
+          
+      </div>
+
+      
+
+      <div class="site-footer">
+  <div class="slogan">Keep Alive.</div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://imhanjie.github.io//atom.xml" target="_blank">RSS</a>
+</div>
+
+
+    </div>
+    <script type="application/javascript">
+
+hljs.initHighlightingOnLoad()
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+  </body>
+</html>
