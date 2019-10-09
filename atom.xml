@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-    <id>https://www.imhanjie.com/</id>
+    <id>https://www.imhanjie.com</id>
     <title>Melody</title>
-    <updated>2019-10-09T08:46:13.549Z</updated>
+    <updated>2019-10-09T08:47:31.334Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
-    <link rel="alternate" href="https://www.imhanjie.com/"/>
-    <link rel="self" href="https://www.imhanjie.com//atom.xml"/>
+    <link rel="alternate" href="https://www.imhanjie.com"/>
+    <link rel="self" href="https://www.imhanjie.com/atom.xml"/>
     <subtitle>Keep Alive.</subtitle>
-    <logo>https://www.imhanjie.com//images/avatar.png</logo>
-    <icon>https://www.imhanjie.com//favicon.ico</icon>
+    <logo>https://www.imhanjie.com/images/avatar.png</logo>
+    <icon>https://www.imhanjie.com/favicon.ico</icon>
     <rights>All rights reserved 2019, Melody</rights>
     <entry>
         <title type="html"><![CDATA[RxJava 2 | retryWhen 操作符源码分析]]></title>
-        <id>https://www.imhanjie.com//post/rxjava-retryWhen-analysis</id>
-        <link href="https://www.imhanjie.com//post/rxjava-retryWhen-analysis">
+        <id>https://www.imhanjie.com/post/rxjava-retryWhen-analysis</id>
+        <link href="https://www.imhanjie.com/post/rxjava-retryWhen-analysis">
         </link>
         <updated>2019-07-18T02:41:08.000Z</updated>
         <content type="html"><![CDATA[<!--more-->
@@ -331,8 +331,8 @@ public void onError(Throwable e) {
     </entry>
     <entry>
         <title type="html"><![CDATA[Java 动态代理及源码简析]]></title>
-        <id>https://www.imhanjie.com//post/java-dynamic-proxy</id>
-        <link href="https://www.imhanjie.com//post/java-dynamic-proxy">
+        <id>https://www.imhanjie.com/post/java-dynamic-proxy</id>
+        <link href="https://www.imhanjie.com/post/java-dynamic-proxy">
         </link>
         <updated>2019-02-23T06:21:56.000Z</updated>
         <summary type="html"><![CDATA[<p>Android 中的 Retrofit 框架以及 Spring AOP 的内部实现都是基于 Java 动态代理机制来实现的，所以理解 Java 动态代理机制有助于我们阅读框架源码以及理解其实现思路。</p>
@@ -579,8 +579,8 @@ public Class&lt;?&gt; apply(ClassLoader loader, Class&lt;?&gt;[] interfaces) {
     </entry>
     <entry>
         <title type="html"><![CDATA[Android Jetpack 系列之 Lifecycles]]></title>
-        <id>https://www.imhanjie.com//post/android-jetpack-lifecycles</id>
-        <link href="https://www.imhanjie.com//post/android-jetpack-lifecycles">
+        <id>https://www.imhanjie.com/post/android-jetpack-lifecycles</id>
+        <link href="https://www.imhanjie.com/post/android-jetpack-lifecycles">
         </link>
         <updated>2019-01-16T06:51:51.000Z</updated>
         <summary type="html"><![CDATA[<p>基于观察者模式的生命周期感知组件。</p>
@@ -734,8 +734,8 @@ public Class&lt;?&gt; apply(ClassLoader loader, Class&lt;?&gt;[] interfaces) {
     </entry>
     <entry>
         <title type="html"><![CDATA[Android 事件分发机制]]></title>
-        <id>https://www.imhanjie.com//post/android_touch_event_dispatch</id>
-        <link href="https://www.imhanjie.com//post/android_touch_event_dispatch">
+        <id>https://www.imhanjie.com/post/android_touch_event_dispatch</id>
+        <link href="https://www.imhanjie.com/post/android_touch_event_dispatch">
         </link>
         <updated>2018-11-11T17:15:32.000Z</updated>
         <summary type="html"><![CDATA[<p>之前一直对Android的事件分发机制似懂非懂，所以拿起「Android开发艺术探索」决定这两天好好学习这方面的知识顺便总结下，以便后面的复习。</p>
@@ -1102,8 +1102,8 @@ if ((viewFlags &amp; ENABLED_MASK) == DISABLED) {
     </entry>
     <entry>
         <title type="html"><![CDATA[Android RemoteViews]]></title>
-        <id>https://www.imhanjie.com//post/android_remoteviews</id>
-        <link href="https://www.imhanjie.com//post/android_remoteviews">
+        <id>https://www.imhanjie.com/post/android_remoteviews</id>
+        <link href="https://www.imhanjie.com/post/android_remoteviews">
         </link>
         <updated>2018-10-24T14:42:44.000Z</updated>
         <summary type="html"><![CDATA[<p>RemoteVies在自定义通知栏布局和桌面Widget的开发中扮演着重要的角色。</p>
@@ -1311,8 +1311,8 @@ if ((viewFlags &amp; ENABLED_MASK) == DISABLED) {
     </entry>
     <entry>
         <title type="html"><![CDATA[MongoDB 常用命令总结]]></title>
-        <id>https://www.imhanjie.com//post/MongoDB-常用命令总结</id>
-        <link href="https://www.imhanjie.com//post/MongoDB-常用命令总结">
+        <id>https://www.imhanjie.com/post/MongoDB-常用命令总结</id>
+        <link href="https://www.imhanjie.com/post/MongoDB-常用命令总结">
         </link>
         <updated>2018-04-26T15:55:02.000Z</updated>
         <summary type="html"><![CDATA[<blockquote>
@@ -1395,8 +1395,8 @@ if ((viewFlags &amp; ENABLED_MASK) == DISABLED) {
     </entry>
     <entry>
         <title type="html"><![CDATA[MVC 模式与 MVP 模式的一些思考]]></title>
-        <id>https://www.imhanjie.com//post/mvc-vs-mvp</id>
-        <link href="https://www.imhanjie.com//post/mvc-vs-mvp">
+        <id>https://www.imhanjie.com/post/mvc-vs-mvp</id>
+        <link href="https://www.imhanjie.com/post/mvc-vs-mvp">
         </link>
         <updated>2017-08-06T10:24:01.000Z</updated>
         <summary type="html"><![CDATA[<h2 id="mvc-vs-mvp">MVC vs MVP</h2>
@@ -1447,8 +1447,8 @@ if ((viewFlags &amp; ENABLED_MASK) == DISABLED) {
     </entry>
     <entry>
         <title type="html"><![CDATA[Android 消息循环机制总结]]></title>
-        <id>https://www.imhanjie.com//post/android_handler_summary</id>
-        <link href="https://www.imhanjie.com//post/android_handler_summary">
+        <id>https://www.imhanjie.com/post/android_handler_summary</id>
+        <link href="https://www.imhanjie.com/post/android_handler_summary">
         </link>
         <updated>2017-06-04T06:43:36.000Z</updated>
         <summary type="html"><![CDATA[<p>要想在一个线程要想使用消息循环系统，通常需要：</p>
@@ -1551,8 +1551,8 @@ public void dispatchMessage(Message msg) {
     </entry>
     <entry>
         <title type="html"><![CDATA[Clean Code - 有意义的命名]]></title>
-        <id>https://www.imhanjie.com//post/clean_code_name</id>
-        <link href="https://www.imhanjie.com//post/clean_code_name">
+        <id>https://www.imhanjie.com/post/clean_code_name</id>
+        <link href="https://www.imhanjie.com/post/clean_code_name">
         </link>
         <updated>2017-05-08T14:45:10.000Z</updated>
         <content type="html"><![CDATA[<h4 id="1-如果名称需要注释来补充那就不算是名副其实">1. 如果名称需要注释来补充，那就不算是名副其实。</h4>
@@ -1565,8 +1565,8 @@ public void dispatchMessage(Message msg) {
     </entry>
     <entry>
         <title type="html"><![CDATA[使用 SurfaceView 实现一个下雨的天气效果]]></title>
-        <id>https://www.imhanjie.com//post/use_surfaceview</id>
-        <link href="https://www.imhanjie.com//post/use_surfaceview">
+        <id>https://www.imhanjie.com/post/use_surfaceview</id>
+        <link href="https://www.imhanjie.com/post/use_surfaceview">
         </link>
         <updated>2017-03-07T08:53:55.000Z</updated>
         <summary type="html"><![CDATA[<p>介绍 SurfaceView 和 View 的区别，以及一些需要使用到 SurfaceView 的场景。</p>
