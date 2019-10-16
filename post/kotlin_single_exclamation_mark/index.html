@@ -5,7 +5,7 @@
     
 <meta charset="utf-8" >
 
-<title>MVC 模式与 MVP 模式的一些思考 | Melody</title>
+<title>Kotlin 中的单 ! 感叹号 | Melody</title>
 <meta name="description" content="Keep Alive.">
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
@@ -80,15 +80,15 @@
       <div class="content-container">
         <div class="post-detail">
           
-          <h2 class="post-title">MVC 模式与 MVP 模式的一些思考</h2>
+          <h2 class="post-title">Kotlin 中的单 ! 感叹号</h2>
           <div class="post-info post-detail-info">
-            <span><i class="icon-calendar-outline"></i> 2017-08-06</span>
+            <span><i class="icon-calendar-outline"></i> 2019-10-16</span>
             
               <span>
                 <i class="icon-pricetags-outline"></i>
                 
-                  <a href="https://www.imhanjie.com/tag/android">
-                    Android
+                  <a href="https://www.imhanjie.com/tag/kotlin">
+                    Kotlin
                     
                   </a>
                 
@@ -96,56 +96,36 @@
             
           </div>
           <div class="post-content">
-            <h2 id="mvc-vs-mvp">MVC vs MVP</h2>
-<p>MVP 一种由传统的 MVC 模式演变而来开发模式。MVC 和 MVP 都有一个共同的地方，就是 Model (M) 负责数据的存取，View (V) 负责界面的显示，Controller (C) 与 Presenter (P) 负责业务逻辑的处理。但是两者最大的不同点就是 View 与 Model 之间的交互方式，在 MVC 中 V，View 允许去直接访问 Model，而在 MVP 中是不可以的，View 与 Model 之间的交互完全由 Presenter 来负责。</p>
-<!--more-->
-<h2 id="android-中的-mvc">Android 中的 MVC</h2>
-<p>在 Android 中，Controller 的职责落在了 Activity 中，而 Activity 负责加载 XML 中的布局显示在界面上，对 View 中的控件的访问也在 Activity 中完成，所以 Activity 变得 “很重”，遇到复杂的界面时，代码量动辄成百上千行，隔段时间再去维护该块代码时，那种痛，可想而知~</p>
-<h2 id="mvp-在-android-中的应用">MVP 在 Android 中的应用</h2>
-<ol>
-<li>Activity V 层只负责界面的显示，业务逻辑交给 P 层处理，P 与 V 直接通过接口通信。</li>
-<li>P 层收到 V 层的交互请求，负责调用 M 层来处理数据，处理完后通知 V 层更新界面。</li>
-<li>P 层与 M 层也通过接口进行通信，P 层处于 V 与 M 之间的中介，负责调度 V 与 M。</li>
-</ol>
-<p>MVP 模式的优点：</p>
-<ul>
-<li>
-<p>实现 View 与 Model 的解耦</p>
-<p>View 与 Model 之间的通信需要通过 Presenter 来完成，修改界面不影响模型，修改模型不影响界面。</p>
-</li>
-<li>
-<p>逻辑更清晰，易于维护</p>
-<p>使用 MVP 后，View 只负责界面的显示，看起来非常干净，不至于过两天再来看就成了 “别人的代码”</p>
-</li>
-<li>
-<p>P 层与 M 层复用</p>
-<p>如果项目中有类似的界面，可以直接复用 Presenter 或者 Model 层</p>
-</li>
-<li>
-<p>适合多人协同开发</p>
-<p>如果一个页面太复杂可以实现多人共同开发，开发之前事先定义好 V 与 P、P 与 V 之间的接口（接口后期根据开发来修改），然后可以让一个人负责界面，另一个人负责业务逻辑，之间使用接口进行通信。</p>
-</li>
-<li>
-<p>单元测试</p>
-<p>可不依托于界面来单独进行业务逻辑的测试</p>
-</li>
-</ul>
-<p>MVP 模式的缺点：</p>
-<ul>
-<li>代码量变多，需要定义很多接口，类文件增多</li>
-<li>需要控制好一些特殊对象的生命周期，防止内存泄漏的问题</li>
-</ul>
-<h2 id="总结">总结</h2>
-<p>MVP 模式没有正确的写法，MVP 只是一个思想，根据需求适合自己项目才是正确的。页面逻辑越复杂，MVP 的优势越明显，所以如果遇到简单的界面，可以不使用 MVP。</p>
+            <p>https://www.itranslater.com/qa/details/2135466650672563200</p>
+<p>平台类型</p>
+<p>only Java</p>
+<p>自行决定是否为空</p>
+<p>加上注解就没了</p>
+<pre><code class="language-java">public interface OnChangedListener {
+    void onChanged(String msg);
+}
+</code></pre>
+<pre><code class="language-java">public class Event {
+    public void setOnChangedListener(OnChangedListener listener) {
+      
+    }
+}
+</code></pre>
+<pre><code class="language-kotlin">fun main() {
+    val event = Event()
+    event.setOnChangedListener {  }
+}
+</code></pre>
+<figure data-type="image" tabindex="1"><img src="https://tva1.sinaimg.cn/large/006y8mN6ly1g7zuptpv1rj30lu07ujs2.jpg" alt=""></figure>
 
           </div>
         </div>
 
         
           <div class="next-post">
-            <a class="purple-link" href="https://www.imhanjie.com/post/android_handler_summary">
+            <a class="purple-link" href="https://www.imhanjie.com/post/rxjava-retryWhen-analysis">
               <h3 class="post-title">
-                下一篇：Android 消息循环机制总结
+                下一篇：RxJava 2 | retryWhen 操作符源码分析
               </h3>
             </a>
           </div>
