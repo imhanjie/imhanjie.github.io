@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://www.imhanjie.com/favicon.ico?v=1577030605337">
+<link rel="shortcut icon" href="https://www.imhanjie.com/favicon.ico?v=1577636042845">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://www.imhanjie.com/styles/main.css">
 
@@ -30,7 +30,7 @@
   <div class="site-header">
     <div class="left">
       <a href="https://www.imhanjie.com">
-        <img class="avatar" src="https://www.imhanjie.com/images/avatar.png?v=1577030605337" alt="" width="32px" height="32px">
+        <img class="avatar" src="https://www.imhanjie.com/images/avatar.png?v=1577636042845" alt="" width="32px" height="32px">
       </a>
       <a href="https://www.imhanjie.com">
         <h1 class="site-title">Melody</h1>
@@ -125,7 +125,7 @@ renderscriptSupportModeEnabled true
 <h2 id="模糊背景">模糊背景</h2>
 <h3 id="局部模糊">局部模糊</h3>
 <p>先上一张我们要实现的效果图：</p>
-<figure data-type="image" tabindex="1"><img src="http://ww2.sinaimg.cn/large/df189f43gw1f8m3hvioi5j209c0gcwfm.jpg" alt=""></figure>
+<figure data-type="image" tabindex="1"><img src="http://ww2.sinaimg.cn/large/df189f43gw1f8m3hvioi5j209c0gcwfm.jpg" alt="" loading="lazy"></figure>
 <p>这里可以看到实现的是局部模糊，在图片的正中间有一个 TextView，TextView 的背景部分做了模糊处理。</p>
 <p>先大致说下模糊的主要步骤(完全模糊步骤一样)：</p>
 <ul>
@@ -266,7 +266,7 @@ import android.support.v8.renderscript.ScriptIntrinsicBlur;
 ...
 </code></pre>
 <p>java代码部分不需要改变，下面再看效果图：</p>
-<figure data-type="image" tabindex="2"><img src="http://ww3.sinaimg.cn/large/df189f43gw1f8m432a1d2j20970g50tf.jpg" alt=""></figure>
+<figure data-type="image" tabindex="2"><img src="http://ww3.sinaimg.cn/large/df189f43gw1f8m432a1d2j20970g50tf.jpg" alt="" loading="lazy"></figure>
 <h3 id="效率如何">效率如何？</h3>
 <p>为了查看操作耗时，我使用 Log 在 blur() 方法的开头和结束地方分别计算了时间，然后查看时间差：</p>
 <pre><code>10-09 17:04:23.664 23665-23665/com.melodyxxx.blurdemo2 E/MainActivity: spend: 120ms
@@ -287,7 +287,7 @@ canvas.drawBitmap(mInputBitmap, 0, 0, paint);
 </code></pre>
 <p>具体可以看我的 Demo ：<a href="https://github.com/melodyxxx/BlurDemo">BlurDemo</a></p>
 <p>下面是 Demo 效果图：</p>
-<figure data-type="image" tabindex="3"><img src="http://ww1.sinaimg.cn/large/df189f43gw1f8m5natyw0g209c0gb7wl.gif" alt=""></figure>
+<figure data-type="image" tabindex="3"><img src="http://ww1.sinaimg.cn/large/df189f43gw1f8m5natyw0g209c0gb7wl.gif" alt="" loading="lazy"></figure>
 <p>结果：<br>
 压缩比例为 2 时：耗时 19 ms<br>
 压缩比例为 8 时：耗时 2 ms</p>

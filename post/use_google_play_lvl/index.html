@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://www.imhanjie.com/favicon.ico?v=1577030605337">
+<link rel="shortcut icon" href="https://www.imhanjie.com/favicon.ico?v=1577636042845">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://www.imhanjie.com/styles/main.css">
 
@@ -30,7 +30,7 @@
   <div class="site-header">
     <div class="left">
       <a href="https://www.imhanjie.com">
-        <img class="avatar" src="https://www.imhanjie.com/images/avatar.png?v=1577030605337" alt="" width="32px" height="32px">
+        <img class="avatar" src="https://www.imhanjie.com/images/avatar.png?v=1577636042845" alt="" width="32px" height="32px">
       </a>
       <a href="https://www.imhanjie.com">
         <h1 class="site-title">Melody</h1>
@@ -110,7 +110,7 @@
 <h3 id="什么是lvl">什么是LVL？</h3>
 <p>**License Verification Library (以下简称LVL)**是谷歌提供给开发者用于验证用户的合法身份的一个机制，比如你想上架一款付费应用(非付费应用也可以使用，但是这个一般没必要)到Google Play，为了防止APK的到处传播，你可以使用此证书验证机制，每次打开应用时，都会对当前用户的合法性进行授权检查。</p>
 <h3 id="lvl的工作流程">LVL的工作流程</h3>
-<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/rq5Zvpy.png" alt=""></figure>
+<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/rq5Zvpy.png" alt="" loading="lazy"></figure>
 <p>上图来自Google的官方介绍。简单来说，验证时：</p>
 <ol>
 <li>应用通过Binder远程绑定到<strong>Google Play Service</strong>(所以用户的设备上必须装有Google Play)</li>
@@ -134,24 +134,24 @@
 </ol>
 <h2 id="上传应用到alphabeta渠道">上传应用到Alpha/Beta渠道</h2>
 <p>注册完开发者后，你可以点击开发者界面首页的&quot;添加应用&quot;，创建你的应用<br>
-<img src="http://i.imgur.com/6hcQZYF.png" alt=""></p>
+<img src="http://i.imgur.com/6hcQZYF.png" alt="" loading="lazy"></p>
 <p>然后来到下面的界面</p>
-<figure data-type="image" tabindex="2"><img src="http://i.imgur.com/EjqgJyJ.png" alt=""></figure>
+<figure data-type="image" tabindex="2"><img src="http://i.imgur.com/EjqgJyJ.png" alt="" loading="lazy"></figure>
 <p>需要注意的是这里创建的应用称为&quot;草稿&quot;，即未发布的(包括未发布在Alpha或者Beta渠道的)应用，由于Google的最新规定，草稿应用不能使用LVL测试，所以如果不把APP发布到Alpha或者Beta渠道(由于正式发布之前需要进行LVL测试，所以不能发布到正式版渠道，正式版渠道是所有用户都能在Google Play搜索到你的应用的)，所以你需要使用LVL测试之前，需要发布你的APP到Alpha或者Beta渠道，你可以点击右上角的&quot;为什么不能发布？&quot;，系统会罗列出你达到发布之前未达到的条件，你只需要按照他的条件一步一步去完成，然后发布到Alpha或者Beta渠道，提交发布后，等上几个小时应该就能审核完成(48小时之内)。然后下面就进行LVL测试</p>
 <h2 id="下载lvl并配置到项目中">下载LVL并配置到项目中</h2>
 <h3 id="下载安装lvl库">下载安装LVL库</h3>
 <p>在进行LVL测试之前，你需要下载LVL库，这里从SDK Manager里面下载即可,找到Google Play License Library，然后Install安装<br>
-<img src="http://i.imgur.com/8B1sv7z.png" alt=""></p>
+<img src="http://i.imgur.com/8B1sv7z.png" alt="" loading="lazy"></p>
 <h3 id="导入到项目中">导入到项目中</h3>
 <p>安装完成后在你的<code>\your sdk dir\extras\google</code>目录下会有一个<code>market_licensing</code>目录，里面包含了library和对应的sample文件，这里我们先把library导入到我们的项目中去，为了保证不修改原library，我这里拷贝了一份library目录到桌面。这里为了演示，已经提前创建好了一个LVLTest项目，然后再project内新建一个Module，如下所示：</p>
 <p>点击File-&gt;New-&gt;Import Module</p>
-<figure data-type="image" tabindex="3"><img src="http://i.imgur.com/KZvFxU5.png" alt=""></figure>
+<figure data-type="image" tabindex="3"><img src="http://i.imgur.com/KZvFxU5.png" alt="" loading="lazy"></figure>
 <p>目录我这里选的是刚刚拷贝到桌面的library目录，你也可以直接选sdk目录内的library，然后Module name这里自己填，我填的是lvlm</p>
-<figure data-type="image" tabindex="4"><img src="http://i.imgur.com/vZPIxdd.png" alt=""></figure>
+<figure data-type="image" tabindex="4"><img src="http://i.imgur.com/vZPIxdd.png" alt="" loading="lazy"></figure>
 <p>然后Next，然后其他的别动，直接点击Finish，然后AS会自动Sync Gradle Files，一般这里肯定会报错的</p>
-<figure data-type="image" tabindex="5"><img src="http://i.imgur.com/G6cerZg.png" alt=""></figure>
+<figure data-type="image" tabindex="5"><img src="http://i.imgur.com/G6cerZg.png" alt="" loading="lazy"></figure>
 <p>很明显，我这里是Build Tools版本不对，这里需要修改下刚刚导入进来的Module内的build.gradle文件</p>
-<figure data-type="image" tabindex="6"><img src="http://i.imgur.com/87FVdLp.png" alt=""></figure>
+<figure data-type="image" tabindex="6"><img src="http://i.imgur.com/87FVdLp.png" alt="" loading="lazy"></figure>
 <pre><code>buildToolsVersion &quot;19.1.0&quot;
 </code></pre>
 <p>将buildToolsVersion版本换成自己app内的build.gradle(不是project内的)对应的版本即可，这里我的是:</p>
@@ -255,7 +255,7 @@
 </code></pre>
 <h3 id="如何获取你的public_key">如何获取你的PUBLIC_KEY</h3>
 <p>首先登陆在自己的开发者控制台界面，进入应用，然后点击左侧的&quot;服务和API&quot;，即可看到：<br>
-<img src="http://i.imgur.com/ISa9idL.png" alt=""></p>
+<img src="http://i.imgur.com/ISa9idL.png" alt="" loading="lazy"></p>
 <p>然后复制到代码中替换<code>YOUR PUBLIC KEY</code>，<strong>注意，千万不要复制出多余的空格，如果有，请删除</strong>。</p>
 <h3 id="android50需要注意的地方">Android5.0+需要注意的地方</h3>
 <p>如果你运行程序在Android5.0+的设备上，你会发现应用直接挂掉了，原因是，library中的远程绑定服务时使用的是隐式绑定，而Android5.0+已经不在支持隐式远程绑定了，所以我们需要修改一下library的源码：</p>
@@ -269,7 +269,7 @@
 <h3 id="测试以及对应的测试响应码说明">测试以及对应的测试响应码说明</h3>
 <p>上面的代码还有具体的处理逻辑没有写，所以自己测试之前，请参考SDK内的sample的处理逻辑。</p>
 <p>为了模拟各种授权的返回结果，Google为开发者提供了授权测试，可以模拟各种授权结果，以便开发者在应用发布之前处理好各种结果的逻辑，可以在开发者界面左侧的设置内的最下方即可找到，这里的Gmail账号不需要填，因为开发者自己的账号本身就在测试范围之内，如果你手机登录的其他Gmail账号，则需要将账号填进去即可，多个账号用逗号隔开</p>
-<figure data-type="image" tabindex="7"><img src="http://i.imgur.com/9LeluW8.png" alt=""></figure>
+<figure data-type="image" tabindex="7"><img src="http://i.imgur.com/9LeluW8.png" alt="" loading="lazy"></figure>
 <p>如图所示谷歌给我们提供了一些测试响应，下面列出几个常用的响应：</p>
 <table>
 <thead>

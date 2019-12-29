@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://www.imhanjie.com/favicon.ico?v=1577030605337">
+<link rel="shortcut icon" href="https://www.imhanjie.com/favicon.ico?v=1577636042845">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://www.imhanjie.com/styles/main.css">
 
@@ -30,7 +30,7 @@
   <div class="site-header">
     <div class="left">
       <a href="https://www.imhanjie.com">
-        <img class="avatar" src="https://www.imhanjie.com/images/avatar.png?v=1577030605337" alt="" width="32px" height="32px">
+        <img class="avatar" src="https://www.imhanjie.com/images/avatar.png?v=1577636042845" alt="" width="32px" height="32px">
       </a>
       <a href="https://www.imhanjie.com">
         <h1 class="site-title">Melody</h1>
@@ -308,7 +308,7 @@ public boolean onTransact(int code, android.os.Parcel data, android.os.Parcel re
 <p>至此，完成了客户端远程调用服务端的方法的过程。</p>
 <hr>
 <p><strong>下面附上Binder的工作机制图：</strong></p>
-<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/fAB1cPe.png" alt=""></figure>
+<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/fAB1cPe.png" alt="" loading="lazy"></figure>
 <hr>
 <p><strong>还需要注意：</strong></p>
 <p>另外还需注意，客户端远程调用服务端的方法时，若服务端内发生异常，这里指的是除RemoteException以外的异常，不论发什么异常，<strong>服务端是不会停止的</strong>，但是部分异常能传递到客户端，例如NullPointerException空指针异常，有些异常不能传递到客户端，例如RuntimeException<br>

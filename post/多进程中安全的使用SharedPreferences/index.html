@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://www.imhanjie.com/favicon.ico?v=1577030605337">
+<link rel="shortcut icon" href="https://www.imhanjie.com/favicon.ico?v=1577636042845">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://www.imhanjie.com/styles/main.css">
 
@@ -30,7 +30,7 @@
   <div class="site-header">
     <div class="left">
       <a href="https://www.imhanjie.com">
-        <img class="avatar" src="https://www.imhanjie.com/images/avatar.png?v=1577030605337" alt="" width="32px" height="32px">
+        <img class="avatar" src="https://www.imhanjie.com/images/avatar.png?v=1577636042845" alt="" width="32px" height="32px">
       </a>
       <a href="https://www.imhanjie.com">
         <h1 class="site-title">Melody</h1>
@@ -293,7 +293,7 @@ PreferencesUtils.putString(LiveWallpaperSettingsActivity.this, &quot;weather_typ
 Log.d(&quot;sp_test&quot;, &quot;Get String :  &quot; + weather_type);
 </code></pre>
 <p>最后运行看打印的Log:</p>
-<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/ixQq3FF.png" alt=""></figure>
+<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/ixQq3FF.png" alt="" loading="lazy"></figure>
 <p>根据Log打印的PID可以看到这里put和get操作不在同一进程，取出值是正确的，所以这种利用ContentProvider封装SharedPreferences是可行的。</p>
 <h3 id="四-最后">四、最后：</h3>
 <p>本文只探讨的是SharedPreferences在多进程中如何安全的使用，当然在多进程也可以不使用SharedPreferences，例如可以使用数据库来存储配置文件和其他的数据，方法也有很多。由于技术有限，文中难免写的不对地方，也欢迎指正。</p>

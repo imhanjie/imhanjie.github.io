@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.0/animate.min.css">
 
 <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://www.imhanjie.com/favicon.ico?v=1577030605337">
+<link rel="shortcut icon" href="https://www.imhanjie.com/favicon.ico?v=1577636042845">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
 <link rel="stylesheet" href="https://www.imhanjie.com/styles/main.css">
 
@@ -30,7 +30,7 @@
   <div class="site-header">
     <div class="left">
       <a href="https://www.imhanjie.com">
-        <img class="avatar" src="https://www.imhanjie.com/images/avatar.png?v=1577030605337" alt="" width="32px" height="32px">
+        <img class="avatar" src="https://www.imhanjie.com/images/avatar.png?v=1577636042845" alt="" width="32px" height="32px">
       </a>
       <a href="https://www.imhanjie.com">
         <h1 class="site-title">Melody</h1>
@@ -156,7 +156,7 @@
 <li>通过 LayoutInflater 去加载 RemoteViews 中的布局文件。</li>
 <li>接着系统会对 View 执行一系列界面更新任务，这些任务就是之前我们通过 set 方法来<strong>提交</strong>的。set 方法对View 的操作不是立刻执行的，在 RemoteViews 内部会记录所有的更新操作，等到 RemoteViews 被加载以后才能执行。</li>
 </ul>
-<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/YNbpXgK.png" alt=""></figure>
+<figure data-type="image" tabindex="1"><img src="http://i.imgur.com/YNbpXgK.png" alt="" loading="lazy"></figure>
 <p>理论上，系统完全可以通过 Binder 去支持所有的 View 和 View 操作，但这样做代价太大，因为 View 的方法太多了，另外就是大量的 IPC 操作会影响效率。为了解决这个问题，<strong>系统并没有通过 Binder 去直接支持 View 的跨进程访问，而是提供了一个 Action 的概念，Action 代表一个 View 的操作，Action 同样实现了 Parcelable 接口。系统首先将 View 操作封装到 Action 对象并将这些对象跨进程传输到远程进程，接着远程进程中执行 Action 对象中的具体操作。</strong></p>
 <p>例如看 setTextViewText 方法的实现：</p>
 <pre><code class="language-java">public void setTextViewText(int viewId, CharSequence text) {
