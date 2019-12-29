@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://www.imhanjie.com</id>
     <title>Melody</title>
-    <updated>2019-12-29T16:14:09.155Z</updated>
+    <updated>2019-12-29T16:25:11.765Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://www.imhanjie.com"/>
     <link rel="self" href="https://www.imhanjie.com/atom.xml"/>
@@ -16,12 +16,12 @@
         <link href="https://www.imhanjie.com/post/custom-docker-image">
         </link>
         <updated>2019-12-29T16:09:58.000Z</updated>
-        <summary type="html"><![CDATA[<h2 id="前言">前言</h2>
-<p>有时候我们可能需要为了满足自己的需求来制作自己的  Docker 镜像，最近我在使用 Docker 搭建 Jenkins 自动化构建平台时遇到了各种环境问题，例如在 Jenkins 官方的镜像内是没有 maven、Android SDK、npm 等环境的，自然也就没法使用 Jenkins 来构建编译我们的项目，这里有三种解决办法：</p>
+        <summary type="html"><![CDATA[<p>有时候我们可能需要为了满足自己的需求来制作自己的  Docker 镜像。</p>
 ]]></summary>
-        <content type="html"><![CDATA[<h2 id="前言">前言</h2>
-<p>有时候我们可能需要为了满足自己的需求来制作自己的  Docker 镜像，最近我在使用 Docker 搭建 Jenkins 自动化构建平台时遇到了各种环境问题，例如在 Jenkins 官方的镜像内是没有 maven、Android SDK、npm 等环境的，自然也就没法使用 Jenkins 来构建编译我们的项目，这里有三种解决办法：</p>
+        <content type="html"><![CDATA[<p>有时候我们可能需要为了满足自己的需求来制作自己的  Docker 镜像。</p>
 <!-- more -->
+<h2 id="前言">前言</h2>
+<p>最近我在使用 Docker 搭建 Jenkins 自动化构建平台时遇到了各种环境问题，例如在 Jenkins 官方的镜像内是没有 maven、Android SDK、npm 等环境的，自然也就没法使用 Jenkins 来构建编译我们的项目，这里有三种解决办法：</p>
 <h5 id="1-直接进入到-jenkins-容器内部安装相关环境">1. 直接进入到 Jenkins 容器内部安装相关环境。</h5>
 <p>需要注意的是，安装相关相关环境后要确保容器不能被删除，容易一旦被删除，那么里面所做的变更都消失了，所以不推荐。</p>
 <h5 id="2-在宿主机上安装相关环境然后通过-docker-挂载卷的形式映射到容器内部">2. 在宿主机上安装相关环境，然后通过 Docker 挂载卷的形式映射到容器内部。</h5>
